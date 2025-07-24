@@ -71,6 +71,14 @@ class HandDetection:
         return extended_fingers
 
     def process_frame(self, frame):
+        # Data to send to Node-Red
+        detection_data = {
+            "num_hands": 0,
+            "hands": [],
+            "buttons_active": self.show_buttons,
+            "touched_button": None
+        }
+
         # Process the frame with MediaPipe first
         rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         rgb_frame.flags.writeable = False
@@ -81,12 +89,15 @@ class HandDetection:
         if results.multi_hand_landmarks:
             self.show_buttons = True
             self.last_hand_detected_time = time.time()  # Update timestamp
+            detection_data["num_hands"] = len(results.multi_hand_landmarks)
         else:
             # If no hands detected for 5 seconds, hide buttons
             if self.show_buttons and time.time() - self.last_hand_detected_time > 5:
                 self.show_buttons = False
                 print("No hands detected for 5 seconds - hiding buttons")
         
+        detection_data["buttons_active"] = self.show_buttons
+
         # Draw buttons only if they should be shown
         if self.show_buttons:
             cv2.rectangle(
@@ -108,9 +119,6 @@ class HandDetection:
                 self.button_right["color"], 
                 cv2.FILLED
             )
-
-        # Data to send to Node-Red
-        handData = []
 
         # Draw hand landmarks on the frame
         if results.multi_hand_landmarks:
@@ -141,6 +149,7 @@ class HandDetection:
                             (255, 255, 255), cv2.FILLED)
                         
                         print(f"Touch detected on {self.button_left['name']} button at ({ix}, {iy})")
+                        detection_data["touched_button"] = self.button_left["name"]
                         if self.nodeRedClient:
                             try:
                                 self.nodeRedClient.sendData({"button": self.button_left["name"], "action": True})
@@ -159,6 +168,7 @@ class HandDetection:
                             (255, 255, 255), cv2.FILLED)
                         
                         print(f"Touch detected on {self.button_right['name']} button at ({ix}, {iy})")
+                        detection_data["touched_button"] = self.button_right["name"]
                         if self.nodeRedClient:
                             try:
                                 self.nodeRedClient.sendData({"button": self.button_right["name"], "action": True})
@@ -168,7 +178,7 @@ class HandDetection:
                         else:
                             print("NodeRedClient is not initialized")
 
-        return frame
+        return frame, detection_data
 
     def close(self):
         self.hands.close()

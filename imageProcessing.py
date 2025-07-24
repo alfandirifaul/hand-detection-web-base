@@ -15,7 +15,7 @@ class ImageProcessing:
         frame = cv.imdecode(npArr, cv.IMREAD_COLOR)
 
         # Process frame with hand detector
-        processedFrame = self.handDetector.process_frame(frame)
+        processedFrame, detection_data = self.handDetector.process_frame(frame)
 
         # Encode processed frame to send back
         ret, buffer = cv.imencode(
@@ -29,5 +29,8 @@ class ImageProcessing:
 
         if ret:
             processedImage = base64.b64encode(buffer).decode('utf-8')
-            socketIo.emit('processed_frame', f'data:image/jpeg;base64,{processedImage}')
+            socketIo.emit('processed_frame', {
+                "image": f'data:image/jpeg;base64,{processedImage}',
+                "detection_data": detection_data
+            })
 

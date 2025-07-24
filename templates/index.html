@@ -7,96 +7,71 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
         * {
             font-family: 'Inter', sans-serif;
         }
         
         body {
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            background: #0a0e1a;
+            color: #e2e8f0;
         }
         
         .glass-card {
-            background: rgba(255, 255, 255, 0.03);
+            background: rgba(17, 24, 39, 0.5);
             backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
         
         .camera-card {
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: #111827;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
         }
         
         .elegant-button {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
-            border: 1px solid rgba(59, 130, 246, 0.2);
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             position: relative;
             overflow: hidden;
-        }
-        
-        .elegant-button::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-            transition: left 0.6s;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
         }
         
         .elegant-button:hover {
-            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(147, 51, 234, 0.15) 100%);
-            border-color: rgba(59, 130, 246, 0.4);
-            transform: translateY(-1px);
-            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.2);
-        }
-        
-        .elegant-button:hover::before {
-            left: 100%;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
         }
         
         .stop-button {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 127, 0.1) 100%);
-            border: 1px solid rgba(239, 68, 68, 0.2);
+            background: linear-gradient(135deg, #ef4444, #d946ef);
         }
         
         .stop-button:hover {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 127, 0.15) 100%);
-            border-color: rgba(239, 68, 68, 0.4);
-            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2);
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.3);
         }
         
         .status-dot {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
             border-radius: 50%;
             transition: all 0.3s ease;
         }
         
         .status-active {
             background: #10b981;
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.6), 0 0 40px rgba(16, 185, 129, 0.3);
+            box-shadow: 0 0 12px #10b981;
             animation: pulse-glow 2s ease-in-out infinite alternate;
         }
         
         .status-inactive {
-            background: #6b7280;
-            box-shadow: 0 0 10px rgba(107, 114, 128, 0.3);
+            background: #4b5563;
         }
         
         @keyframes pulse-glow {
-            from {
-                box-shadow: 0 0 20px rgba(16, 185, 129, 0.6), 0 0 40px rgba(16, 185, 129, 0.3);
-            }
-            to {
-                box-shadow: 0 0 30px rgba(16, 185, 129, 0.8), 0 0 60px rgba(16, 185, 129, 0.4);
-            }
+            from { box-shadow: 0 0 12px #10b981; }
+            to { box-shadow: 0 0 20px #10b981, 0 0 5px #fff; }
         }
         
         .camera-container {
@@ -104,32 +79,41 @@
             border-radius: 12px;
             overflow: hidden;
             position: relative;
+            border: 2px solid transparent;
+            transition: border-color 0.3s ease;
         }
         
-        .camera-container::before {
-            content: '';
-            position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            background: linear-gradient(45deg, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3));
-            border-radius: 14px;
-            z-index: -1;
-            opacity: 0;
-            transition: opacity 0.3s ease;
+        .camera-active {
+            border-color: #3b82f6;
+        }
+
+        .info-panel {
+            transition: all 0.3s ease;
+        }
+
+        .info-item {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .button-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            transition: all 0.2s ease;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+        }
+        .button-indicator.green { background-color: #22c55e; }
+        .button-indicator.red { background-color: #ef4444; }
+        .button-indicator.touched {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px currentColor;
         }
         
-        .camera-active::before {
-            opacity: 1;
-        }
-        
-        .title-glow {
-            background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
     </style>
     <script>
         let socket;
@@ -148,7 +132,8 @@
             socket = io();
             
             socket.on('processed_frame', function(data) {
-                processedFeed.src = data;
+                processedFeed.src = data.image;
+                updateDashboard(data.detection_data);
                 if (streaming) {
                     document.querySelector('.camera-container').classList.add('camera-active');
                 }
@@ -156,6 +141,8 @@
             
             document.getElementById('start-camera').addEventListener('click', startCamera);
             document.getElementById('stop-camera').addEventListener('click', stopCamera);
+            
+            updateDashboard({ num_hands: 0, buttons_active: false, touched_button: null });
         });
 
         function startCamera() {
@@ -197,6 +184,7 @@
             updateStatus(false);
             toggleButtons();
             document.querySelector('.camera-container').classList.remove('camera-active');
+            updateDashboard({ num_hands: 0, buttons_active: false, touched_button: null });
         }
         
         function captureFrame() {
@@ -240,62 +228,95 @@
                 stopBtn.style.display = 'none';
             }
         }
+
+        function updateDashboard(data) {
+            const handsCountEl = document.getElementById('hands-count');
+            const buttonsActiveEl = document.getElementById('buttons-active');
+            const greenBtn = document.getElementById('btn-green');
+            const redBtn = document.getElementById('btn-red');
+
+            handsCountEl.textContent = data.num_hands;
+            buttonsActiveEl.textContent = data.buttons_active ? 'Visible' : 'Hidden';
+            buttonsActiveEl.className = data.buttons_active ? 'font-semibold text-cyan-400' : 'font-semibold text-slate-500';
+
+            greenBtn.classList.toggle('touched', data.touched_button === 'green');
+            redBtn.classList.toggle('touched', data.touched_button === 'red');
+        }
     </script>
 </head>
 <body class="min-h-screen">
-    <div class="min-h-screen flex flex-col items-center justify-center p-8">
+    <div class="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8">
         <!-- Header -->
-        <div class="text-center mb-12">
-            <h1 class="text-4xl font-light title-glow mb-3">Hand Detection</h1>
-            <p class="text-slate-400 text-sm font-light">Real-time AI gesture recognition</p>
+        <div class="text-center mb-8">
+            <h1 class="text-4xl sm:text-5xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-200 to-slate-400 mb-2">Hand Gesture Control</h1>
+            <p class="text-slate-400 text-sm font-light">Real-time AI gesture recognition dashboard</p>
         </div>
 
         <!-- Main Content -->
-        <div class="w-full max-w-2xl">
-            <!-- Controls -->
-            <div class="glass-card rounded-2xl p-6 mb-8">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-4">
-                        <button id="start-camera" class="elegant-button px-8 py-3 text-white rounded-xl text-sm font-medium flex items-center gap-3 relative">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.01M15 10h1.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                            </svg>
+        <div class="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Left Panel: Controls & Info -->
+            <div class="lg:col-span-1 flex flex-col gap-8">
+                <!-- Controls -->
+                <div class="glass-card rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-white">Controls</h3>
+                        <div class="flex items-center gap-3">
+                            <div id="status-dot" class="status-dot status-inactive"></div>
+                            <span id="status-text" class="text-slate-400 text-sm font-medium">Ready</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col sm:flex-row lg:flex-col gap-4">
+                        <button id="start-camera" class="elegant-button w-full px-6 py-3 text-white rounded-xl text-sm font-medium flex items-center justify-center gap-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 10l4.55a2 2 0 012 1.732V15a2 2 0 01-2 1.732l-4.55-2.275A2 2 0 0115 13v-2a2 2 0 010-1.464zM4 9h6a2 2 0 012 2v2a2 2 0 01-2 2H4a2 2 0 01-2-2v-2a2 2 0 012-2z"></path></svg>
                             Start Detection
                         </button>
-                        
-                        <button id="stop-camera" class="elegant-button stop-button px-8 py-3 text-white rounded-xl text-sm font-medium hidden items-center gap-3 relative">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10h6v4H9z"></path>
-                            </svg>
+                        <button id="stop-camera" class="elegant-button stop-button w-full px-6 py-3 text-white rounded-xl text-sm font-medium hidden items-center justify-center gap-3">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
                             Stop Detection
                         </button>
                     </div>
-                    
-                    <div class="flex items-center gap-3">
-                        <div id="status-dot" class="status-dot status-inactive"></div>
-                        <span id="status-text" class="text-slate-400 text-sm font-medium">Ready</span>
+                </div>
+
+                <!-- Info Panel -->
+                <div class="glass-card rounded-2xl p-6 info-panel">
+                    <h3 class="text-lg font-semibold text-white mb-4">Live Data</h3>
+                    <div class="space-y-3">
+                        <div class="info-item">
+                            <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0zM14 11.5V14m0-2.5v-6a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0z"></path></svg>
+                            <span>Hands Detected:</span>
+                            <span id="hands-count" class="font-semibold text-white ml-auto">0</span>
+                        </div>
+                        <div class="info-item">
+                            <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                            <span>Buttons Status:</span>
+                            <span id="buttons-active" class="font-semibold text-slate-500 ml-auto">Hidden</span>
+                        </div>
+                        <div class="info-item">
+                            <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10h6c2 1 2.657 1.657 2.657 2.657z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.001 12m0 0c2.121-2.121 4.242 0 4.242 0-2.12 2.121 0 4.242 0 4.242-2.121-2.12-4.242 0-4.242 0z"></path></svg>
+                            <span>Last Touch:</span>
+                            <div class="ml-auto flex items-center gap-3">
+                                <div id="btn-green" class="button-indicator green"></div>
+                                <div id="btn-red" class="button-indicator red"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Camera Display -->
-            <div class="camera-card rounded-2xl overflow-hidden">
-                <div class="p-5 border-b border-white/5">
-                    <h3 class="text-white font-medium text-sm flex items-center gap-2">
-                        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
-                        </svg>
+            <!-- Right Panel: Camera Display -->
+            <div class="lg:col-span-2 camera-card rounded-2xl overflow-hidden">
+                <div class="p-5 border-b border-white/10">
+                    <h3 class="text-white font-semibold text-sm flex items-center gap-2">
+                        <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                         Live Detection Feed
                     </h3>
                 </div>
-                <div class="p-6 flex justify-center">
+                <div class="p-4 sm:p-6 flex justify-center items-center bg-black">
                     <div class="camera-container">
                         <img id="processed-feed" class="block" 
                              width="640" height="480"
                              style="width: 640px; height: 480px; object-fit: cover; transform: scaleX(-1);"
-                             src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQwIiBoZWlnaHQ9IjQ4MCIgdmlld0JveD0iMCAwIDY0MCA0ODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI2NDAiIGhlaWdodD0iNDgwIiBmaWxsPSIjMDAwIi8+CjxjaXJjbGUgY3g9IjMyMCIgY3k9IjI0MCIgcj0iMzAiIHN0cm9rZT0iIzMzNGE1NSIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBvcGFjaXR5PSIwLjMiLz4KPHR2ZXh0IHg9IjMyMCIgeT0iMjkwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjM3Mzg4IiBmb250LWZhbWlseT0iSW50ZXIiIGZvbnQtc2l6ZT0iMTQiPkF3YWl0aW5nIGNhbWVyYSBpbnB1dDwvdGV4dD4KPC9zdmc+Cg==" 
+                             src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQwIiBoZWlnaHQ9IjQ4MCIgdmlld0JveD0iMCAwIDY0MCA0ODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjY0MCIgaGVpZ2h0PSI0ODAiIGZpbGw9IiMxMTI4MjciLz48dGV4dCB4PSIzMjAiIHk9IjI0MCIgZmlsbD0iIzk0YTNmYSIgZm9udC1mYW1pbHk9IkludGVyIiBmb250LXNpemU9IjE2IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIj5Bwaiting for camera...PC90ZXh0Pjwvc3ZnPg=="
                              alt="Hand detection feed">
                     </div>
                 </div>
