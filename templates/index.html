@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hand Detection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+        
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        }
+        
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .camera-card {
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+        }
+        
+        .elegant-button {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%);
+            border: 1px solid rgba(59, 130, 246, 0.2);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .elegant-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transition: left 0.6s;
+        }
+        
+        .elegant-button:hover {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(147, 51, 234, 0.15) 100%);
+            border-color: rgba(59, 130, 246, 0.4);
+            transform: translateY(-1px);
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.2);
+        }
+        
+        .elegant-button:hover::before {
+            left: 100%;
+        }
+        
+        .stop-button {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(220, 38, 127, 0.1) 100%);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+        
+        .stop-button:hover {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 127, 0.15) 100%);
+            border-color: rgba(239, 68, 68, 0.4);
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2);
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        
+        .status-active {
+            background: #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.6), 0 0 40px rgba(16, 185, 129, 0.3);
+            animation: pulse-glow 2s ease-in-out infinite alternate;
+        }
+        
+        .status-inactive {
+            background: #6b7280;
+            box-shadow: 0 0 10px rgba(107, 114, 128, 0.3);
+        }
+        
+        @keyframes pulse-glow {
+            from {
+                box-shadow: 0 0 20px rgba(16, 185, 129, 0.6), 0 0 40px rgba(16, 185, 129, 0.3);
+            }
+            to {
+                box-shadow: 0 0 30px rgba(16, 185, 129, 0.8), 0 0 60px rgba(16, 185, 129, 0.4);
+            }
+        }
+        
+        .camera-container {
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .camera-container::before {
+            content: '';
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            right: -2px;
+            bottom: -2px;
+            background: linear-gradient(45deg, rgba(59, 130, 246, 0.3), rgba(147, 51, 234, 0.3));
+            border-radius: 14px;
+            z-index: -1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .camera-active::before {
+            opacity: 1;
+        }
+        
+        .title-glow {
+            background: linear-gradient(135deg, #ffffff 0%, #e2e8f0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+    </style>
+    <script>
+        let socket;
+        let video;
+        let canvas;
+        let processedFeed;
+        let streaming = false;
+        const FPS = 15;
+        let frameInterval;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            video = document.getElementById('camera-feed');
+            canvas = document.getElementById('canvas');
+            processedFeed = document.getElementById('processed-feed');
+            
+            socket = io();
+            
+            socket.on('processed_frame', function(data) {
+                processedFeed.src = data;
+                if (streaming) {
+                    document.querySelector('.camera-container').classList.add('camera-active');
+                }
+            });
+            
+            document.getElementById('start-camera').addEventListener('click', startCamera);
+            document.getElementById('stop-camera').addEventListener('click', stopCamera);
+        });
+
+        function startCamera() {
+            if (streaming) return;
+            
+            navigator.mediaDevices.getUserMedia({ 
+                video: { width: 640, height: 480 }
+            })
+            .then(stream => {
+                video.srcObject = stream;
+                video.play();
+                streaming = true;
+                
+                canvas.width = 640;
+                canvas.height = 480;
+                
+                frameInterval = setInterval(captureFrame, 1000/FPS);
+                
+                updateStatus(true);
+                toggleButtons();
+            })
+            .catch(err => {
+                console.error("Camera error: " + err);
+                updateStatus(false, 'Camera access denied');
+            });
+        }
+
+        function stopCamera() {
+            if (!streaming) return;
+            
+            clearInterval(frameInterval);
+            
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+            
+            video.srcObject = null;
+            streaming = false;
+            updateStatus(false);
+            toggleButtons();
+            document.querySelector('.camera-container').classList.remove('camera-active');
+        }
+        
+        function captureFrame() {
+            if (!streaming) return;
+            
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+            socket.emit('frame', imageData);
+        }
+        
+        function updateStatus(active, errorMsg = '') {
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+            
+            if (active) {
+                statusDot.className = 'status-dot status-active';
+                statusText.textContent = 'Detecting';
+                statusText.className = 'text-emerald-400 text-sm font-medium';
+            } else if (errorMsg) {
+                statusDot.className = 'status-dot bg-red-400';
+                statusText.textContent = errorMsg;
+                statusText.className = 'text-red-400 text-sm font-medium';
+            } else {
+                statusDot.className = 'status-dot status-inactive';
+                statusText.textContent = 'Ready';
+                statusText.className = 'text-slate-400 text-sm font-medium';
+            }
+        }
+        
+        function toggleButtons() {
+            const startBtn = document.getElementById('start-camera');
+            const stopBtn = document.getElementById('stop-camera');
+            
+            if (streaming) {
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'flex';
+            } else {
+                startBtn.style.display = 'flex';
+                stopBtn.style.display = 'none';
+            }
+        }
+    </script>
+</head>
+<body class="min-h-screen">
+    <div class="min-h-screen flex flex-col items-center justify-center p-8">
+        <!-- Header -->
+        <div class="text-center mb-12">
+            <h1 class="text-4xl font-light title-glow mb-3">Hand Detection</h1>
+            <p class="text-slate-400 text-sm font-light">Real-time AI gesture recognition</p>
+        </div>
+
+        <!-- Main Content -->
+        <div class="w-full max-w-2xl">
+            <!-- Controls -->
+            <div class="glass-card rounded-2xl p-6 mb-8">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <button id="start-camera" class="elegant-button px-8 py-3 text-white rounded-xl text-sm font-medium flex items-center gap-3 relative">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1.01M15 10h1.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Start Detection
+                        </button>
+                        
+                        <button id="stop-camera" class="elegant-button stop-button px-8 py-3 text-white rounded-xl text-sm font-medium hidden items-center gap-3 relative">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10h6v4H9z"></path>
+                            </svg>
+                            Stop Detection
+                        </button>
+                    </div>
+                    
+                    <div class="flex items-center gap-3">
+                        <div id="status-dot" class="status-dot status-inactive"></div>
+                        <span id="status-text" class="text-slate-400 text-sm font-medium">Ready</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Camera Display -->
+            <div class="camera-card rounded-2xl overflow-hidden">
+                <div class="p-5 border-b border-white/5">
+                    <h3 class="text-white font-medium text-sm flex items-center gap-2">
+                        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                        </svg>
+                        Live Detection Feed
+                    </h3>
+                </div>
+                <div class="p-6 flex justify-center">
+                    <div class="camera-container">
+                        <img id="processed-feed" class="block" 
+                             width="640" height="480"
+                             style="width: 640px; height: 480px; object-fit: cover; transform: scaleX(-1);"
+                             src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQwIiBoZWlnaHQ9IjQ4MCIgdmlld0JveD0iMCAwIDY0MCA0ODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSI2NDAiIGhlaWdodD0iNDgwIiBmaWxsPSIjMDAwIi8+CjxjaXJjbGUgY3g9IjMyMCIgY3k9IjI0MCIgcj0iMzAiIHN0cm9rZT0iIzMzNGE1NSIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBvcGFjaXR5PSIwLjMiLz4KPHR2ZXh0IHg9IjMyMCIgeT0iMjkwIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjM3Mzg4IiBmb250LWZhbWlseT0iSW50ZXIiIGZvbnQtc2l6ZT0iMTQiPkF3YWl0aW5nIGNhbWVyYSBpbnB1dDwvdGV4dD4KPC9zdmc+Cg==" 
+                             alt="Hand detection feed">
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Hidden video element for camera access -->
+        <video id="camera-feed" class="hidden"></video>
+        <canvas id="canvas" class="hidden"></canvas>
+    </div>
+</body>
+</html>
