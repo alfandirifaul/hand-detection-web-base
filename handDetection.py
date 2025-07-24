@@ -84,12 +84,39 @@ class HandDetection:
 
                 # Check for button touch
                 if self._is_touching((ix, iy), self.button_left):
+                    # Visual feedback - change button color temporarily
+                    cv2.rectangle(frame, self.button_left["pos"], 
+                        (self.button_left["pos"][0] + self.button_left["size"][0], 
+                         self.button_left["pos"][1] + self.button_left["size"][1]), 
+                        (255, 255, 255), cv2.FILLED)
+                    
+                    print(f"Touch detected on {self.button_left['name']} button at ({ix}, {iy})")
                     if self.nodeRedClient:
-                        self.nodeRedClient.sendData({"button": self.button_left["name"], "action": "touch"})
+                        try:
+                            self.nodeRedClient.sendData({"button": self.button_left["name"], "action": "touch"})
+                            print(f"Data sent to Node-RED: {self.button_left['name']}")
+                        except Exception as e:
+                            print(f"Error sending data to Node-RED: {e}")
+                    else:
+                        print("NodeRedClient is not initialized")
                 
+                # Same for right button...
                 if self._is_touching((ix, iy), self.button_right):
+                    # Visual feedback - change button color temporarily
+                    cv2.rectangle(frame, self.button_right["pos"], 
+                        (self.button_right["pos"][0] + self.button_right["size"][0], 
+                         self.button_right["pos"][1] + self.button_right["size"][1]), 
+                        (255, 255, 255), cv2.FILLED)
+                    
+                    print(f"Touch detected on {self.button_right['name']} button at ({ix}, {iy})")
                     if self.nodeRedClient:
-                        self.nodeRedClient.sendData({"button": self.button_right["name"], "action": "touch"})
+                        try:
+                            self.nodeRedClient.sendData({"button": self.button_right["name"], "action": "touch"})
+                            print(f"Data sent to Node-RED: {self.button_right['name']}")
+                        except Exception as e:
+                            print(f"Error sending data to Node-RED: {e}")
+                    else:
+                        print("NodeRedClient is not initialized")
 
         return frame
 
