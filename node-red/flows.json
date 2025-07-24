@@ -1,118 +1,79 @@
 [
     {
-        "id": "91e395e677c29251",
+        "id": "hand-detection-flow",
+        "type": "tab",
+        "label": "Hand Detection",
+        "disabled": false,
+        "info": "Flow for processing hand detection data from Python"
+    },
+    {
+        "id": "f073f47f8e86641d",
+        "type": "http in",
+        "z": "hand-detection-flow",
+        "name": "Hand Detection Input",
+        "url": "/hand-detection",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 140,
+        "y": 200,
+        "wires": [
+            [
+                "0ce82e519618b1ca"
+            ]
+        ]
+    },
+    {
+        "id": "0ce82e519618b1ca",
+        "type": "json",
+        "z": "hand-detection-flow",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 190,
+        "y": 300,
+        "wires": [
+            [
+                "4f96e230c5e7be41"
+            ]
+        ]
+    },
+    {
+        "id": "4f96e230c5e7be41",
         "type": "function",
         "z": "hand-detection-flow",
-        "name": "Process Serial Data",
-        "func": "// Process Serial Data\nif (Buffer.isBuffer(msg.payload)) {\n    msg.payload = msg.payload.toString().trim();\n}\n\n// Remove any non-numeric characters\nlet cleaned = msg.payload.replace(/[^0-9]/g, '');\n\n// Try to parse as number\nif (cleaned) {\n    let num = parseInt(cleaned);\n    if (!isNaN(num)) {\n        msg.payload = num;\n    }\n}\n\n// Log data\nnode.log(\"Serial data received: \" + msg.payload);\n\nreturn msg;",
+        "name": "Process Hand Data",
+        "func": "if (msg.payload && msg.payload.data) {\n    // Extract the data field from the message\n    return {\n        payload: msg.payload.data\n    };\n} else if (typeof msg.payload === 'string') {\n    // Handle case where payload is a JSON string\n    try {\n        const parsed = JSON.parse(msg.payload);\n        if (parsed.data) {\n            return {\n                payload: parsed.data\n            };\n        }\n    } catch (e) {\n        node.error(\"Failed to parse JSON: \" + e.message, msg);\n    }\n}\n\n// Return original message if we couldn't extract data\nnode.warn(\"Could not extract data field from message\");\nreturn msg;",
         "outputs": 1,
-        "timeout": "",
+        "timeout": 0,
         "noerr": 0,
         "initialize": "",
         "finalize": "",
         "libs": [],
-        "x": 370,
-        "y": 620,
+        "x": 350,
+        "y": 300,
         "wires": [
             [
-                "b3ef8c8ee7c5b246",
-                "30e86eb7d704ce10"
+                "4876c41ab538860a"
             ]
         ]
     },
     {
-        "id": "763185e5a77d14a9",
-        "type": "serial in",
-        "z": "hand-detection-flow",
-        "name": "Read Serial",
-        "serial": "a87206ce492a1d44",
-        "x": 180,
-        "y": 620,
-        "wires": [
-            [
-                "91e395e677c29251"
-            ]
-        ]
-    },
-    {
-        "id": "b3ef8c8ee7c5b246",
+        "id": "4876c41ab538860a",
         "type": "debug",
         "z": "hand-detection-flow",
-        "name": "Serial Debug",
+        "name": "Processed Hand Data",
         "active": true,
         "tosidebar": true,
-        "console": true,
+        "console": false,
         "tostatus": false,
         "complete": "payload",
         "targetType": "msg",
         "statusVal": "",
         "statusType": "auto",
-        "x": 570,
-        "y": 580,
+        "x": 580,
+        "y": 300,
         "wires": []
-    },
-    {
-        "id": "30e86eb7d704ce10",
-        "type": "ui_gauge",
-        "z": "hand-detection-flow",
-        "name": "Serial Counter",
-        "group": "b95e90b47a3d7d01",
-        "order": 5,
-        "width": "4",
-        "height": "3",
-        "gtype": "donut",
-        "title": "Serial Value",
-        "label": "count",
-        "format": "{{value}}",
-        "min": 0,
-        "max": "100",
-        "colors": [
-            "#00b500",
-            "#e6e600",
-            "#ca3838"
-        ],
-        "seg1": "",
-        "seg2": "",
-        "x": 570,
-        "y": 660,
-        "wires": []
-    },
-    {
-        "id": "a87206ce492a1d44",
-        "type": "serial-port",
-        "name": "DOIT ESP32 DEVKIT V1",
-        "serialport": "/dev/tty.usbserial-0001",
-        "serialbaud": "115200",
-        "databits": 8,
-        "parity": "none",
-        "stopbits": 1,
-        "waitfor": "",
-        "dtr": "none",
-        "rts": "none",
-        "cts": "none",
-        "dsr": "none",
-        "newline": "\\n",
-        "bin": "false",
-        "out": "char",
-        "addchar": "",
-        "responsetimeout": 10000
-    },
-    {
-        "id": "b95e90b47a3d7d01",
-        "type": "ui_group",
-        "name": "Hand Detection",
-        "tab": "a799bdab8528ae30",
-        "order": 1,
-        "disp": true,
-        "width": "12",
-        "collapse": false
-    },
-    {
-        "id": "a799bdab8528ae30",
-        "type": "ui_tab",
-        "name": "Hand Detection",
-        "icon": "dashboard",
-        "disabled": false,
-        "hidden": false
     }
 ]
