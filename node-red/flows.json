@@ -1,19 +1,19 @@
 [
     {
-        "id": "f073f47f8e86641d",
-        "type": "http in",
+        "id": "4876c41ab538860a",
+        "type": "debug",
         "z": "hand-detection-flow",
-        "name": "Hand Detection Input",
-        "url": "/hand-detection",
-        "method": "post",
-        "upload": false,
-        "swaggerDoc": "",
-        "x": 140,
+        "name": "OUT Green",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 510,
         "y": 200,
-        "wires": [
-            [
-                "0ce82e519618b1ca"
-            ]
-        ]
+        "wires": []
     }
 ]
