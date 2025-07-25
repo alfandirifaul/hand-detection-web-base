@@ -110,39 +110,100 @@ class HandDetection:
                 # Check if any fingers are detected
                 if finger_count > 0:
                     any_fingers_detected = True
+        
+            # Store hand data
+            hand_data = {
+                "id": hand_idx,
+                "fingers": finger_count
+            }
+            detection_data["hands"].append(hand_data)
             
-                # Store hand data
-                hand_data = {
-                    "id": hand_idx,
-                    "fingers": finger_count
-                }
-                detection_data["hands"].append(hand_data)
-                
-                # Display finger count near the hand
-                h, w, _ = frame.shape
-                wrist = hand_landmarks.landmark[self.mp_hands.HandLandmark.WRIST]
-                wrist_x, wrist_y = int(wrist.x * w), int(wrist.y * h)
-                
-                # Draw the finger count near the wrist
-                cv2.putText(
-                    frame, 
-                    f"Fingers: {finger_count}", 
-                    (wrist_x - 10, wrist_y - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX, 
-                    0.7, 
-                    (255, 255, 255), 
-                    2
-                )
-                
-                # Draw hand landmarks
-                self.mp_draw.draw_landmarks(
-                    frame,
-                    hand_landmarks,
-                    self.mp_hands.HAND_CONNECTIONS,
-                    self.mp_drawing_styles.get_default_hand_landmarks_style(),
-                    self.mp_drawing_styles.get_default_hand_connections_style()
-                )
+            # Display finger count near the hand
+            h, w, _ = frame.shape
+            wrist = hand_landmarks.landmark[self.mp_hands.HandLandmark.WRIST]
+            wrist_x, wrist_y = int(wrist.x * w), int(wrist.y * h)
             
+            # Draw the finger count near the wrist
+            cv2.putText(
+                frame, 
+                f"Fingers: {finger_count}", 
+                (wrist_x - 10, wrist_y - 10),
+                cv2.FONT_HERSHEY_SIMPLEX, 
+                0.7, 
+                (255, 255, 255), 
+                2
+            )
+            
+            # Display hand coordinates at the right bottom but above the text
+            index_finger_tip = hand_landmarks.landmark[self.mp_hands.HandLandmark.INDEX_FINGER_TIP]
+            ix, iy = int(index_finger_tip.x * w), int(index_finger_tip.y * h)
+            
+            # Position the coordinates display at the right bottom
+            coords_text_x = f"X: {ix}"
+            coords_text_y = f"Y: {iy}"
+
+            # Get the size of both text lines to determine the background rectangle dimensions
+            (x_width, x_height), _ = cv2.getTextSize(
+                coords_text_x,
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                1
+            )
+            (y_width, y_height), _ = cv2.getTextSize(
+                coords_text_y,
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                1
+            )
+
+            # Calculate the maximum width needed
+            max_width = max(x_width, y_width)
+            total_height = x_height + y_height + 5  # 5 pixels spacing between lines
+
+            # Place at right bottom, above the instruction text
+            coords_x = w - max_width - 50  # 10 pixels from right edge
+            coords_y_first_line = h - 100  # First line position
+            coords_y_second_line = coords_y_first_line + x_height + 5  # Second line position
+
+            # Draw background for better visibility
+            cv2.rectangle(
+                frame,
+                (coords_x - 5, coords_y_first_line - x_height - 5),
+                (coords_x + max_width + 5, coords_y_second_line + 5),
+                (0, 0, 0, 128),
+                cv2.FILLED
+            )
+
+            # Draw the coordinates text (X on first line, Y on second line)
+            cv2.putText(
+                frame,
+                coords_text_x,
+                (coords_x, coords_y_first_line),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (100, 255, 255),  # Yellow-cyan color for visibility
+                1
+            )
+
+            cv2.putText(
+                frame,
+                coords_text_y,
+                (coords_x, coords_y_second_line),
+                cv2.FONT_HERSHEY_SIMPLEX,
+                0.6,
+                (100, 255, 255),  # Yellow-cyan color for visibility
+                1
+            )
+            
+            # Draw hand landmarks
+            self.mp_draw.draw_landmarks(
+                frame,
+                hand_landmarks,
+                self.mp_hands.HAND_CONNECTIONS,
+                self.mp_drawing_styles.get_default_hand_landmarks_style(),
+                self.mp_drawing_styles.get_default_hand_connections_style()
+            )
+    
             # Update button visibility based on detection
             if not self.show_buttons and five_finger_detected:
                 # Only activate buttons if 5 fingers are detected and buttons are not already active
