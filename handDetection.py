@@ -75,6 +75,7 @@ class HandDetection:
         detection_data = {
             "num_hands": 0,
             "hands": [],
+            "fingers_count": 0,
             "buttons_active": self.show_buttons,
             "touched_button": None
         }
@@ -122,7 +123,25 @@ class HandDetection:
 
         # Draw hand landmarks on the frame
         if results.multi_hand_landmarks:
+            total_fingers = 0
+            
             for hand_idx, hand_landmarks in enumerate(results.multi_hand_landmarks):
+                # Count fingers for this hand
+                finger_count = self._count_fingers(hand_landmarks)
+                total_fingers += finger_count
+                
+                # Store hand data
+                hand_data = {
+                    "id": hand_idx,
+                    "fingers": finger_count
+                }
+                detection_data["hands"].append(hand_data)
+                
+                # Display finger count near the hand
+                h, w, _ = frame.shape
+                wrist = hand_landmarks.landmark[self.mp_hands.HandLandmark.WRIST]
+                wrist_x, wrist_y = int(wrist.x * w), int(wrist.y * h)
+                
                 # Draw hand landmarks
                 self.mp_draw.draw_landmarks(
                     frame,
@@ -132,9 +151,6 @@ class HandDetection:
                     self.mp_drawing_styles.get_default_hand_connections_style()
                 )
 
-                # Add additional information
-                h, w, _ = frame.shape
-                
                 # Get index finger tip position
                 index_finger_tip = hand_landmarks.landmark[self.mp_hands.HandLandmark.INDEX_FINGER_TIP]
                 ix, iy = int(index_finger_tip.x * w), int(index_finger_tip.y * h)
@@ -152,8 +168,8 @@ class HandDetection:
                         detection_data["touched_button"] = self.button_left["name"]
                         if self.nodeRedClient:
                             try:
-                                self.nodeRedClient.sendData({"button": self.button_left["name"], "action": True})
-                                print(f"Data sent to Node-RED: {self.button_left['name']}")
+                                self.nodeRedClient.sendData({"button": self.button_left["name"], "action": True, "fingers": finger_count})
+                                print(f"Data sent to Node-RED: {self.button_left['name']} with {finger_count} fingers")
                             except Exception as e:
                                 print(f"Error sending data to Node-RED: {e}")
                         else:
@@ -171,12 +187,15 @@ class HandDetection:
                         detection_data["touched_button"] = self.button_right["name"]
                         if self.nodeRedClient:
                             try:
-                                self.nodeRedClient.sendData({"button": self.button_right["name"], "action": True})
-                                print(f"Data sent to Node-RED: {self.button_right['name']}")
+                                self.nodeRedClient.sendData({"button": self.button_right["name"], "action": True, "fingers": finger_count})
+                                print(f"Data sent to Node-RED: {self.button_right['name']} with {finger_count} fingers")
                             except Exception as e:
                                 print(f"Error sending data to Node-RED: {e}")
                         else:
                             print("NodeRedClient is not initialized")
+            
+            # Store total finger count
+            detection_data["fingers_count"] = total_fingers
 
         return frame, detection_data
 
