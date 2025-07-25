@@ -1,0 +1,27 @@
+[
+    {
+        "id": "e32cfbace954997b",
+        "type": "inject",
+        "z": "hand-detection-flow",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "3",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 610,
+        "y": 480,
+        "wires": [
+            [
+                "bf2f4029f6f04adc"
+            ]
+        ]
+    }
+]
