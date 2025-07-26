@@ -21,10 +21,9 @@ handDataClient = NodeRedClient(
 )
 
 # Initialize camera
-camera = None
+camera = Camera()
 try:
     print("🎥 Attempting to initialize camera on Ubuntu server...")
-    camera = Camera()
     print("✅ Camera initialized successfully")
     print(f"📱 Camera status: {'opened' if camera.is_opened() else 'closed'}")
 except Exception as e:
