@@ -13,96 +13,143 @@ class Camera:
         self.init_camera()
 
     def init_camera(self):
-        # Scan for available cameras with detailed Ubuntu server analysis
-        available_cameras = self._find_available_cameras(10)
+        print("🎥 INITIALIZING UBUNTU SERVER CAMERA")
         
-        if not available_cameras:
-            print("❌ No cameras detected on the Ubuntu server")
-            print("\n🔧 Quick fixes to try:")
-            print("   sudo apt update && sudo apt install v4l-utils")
-            print("   sudo usermod -a -G video $USER")
-            print("   v4l2-ctl --list-devices")
-            print("   python3 ubuntu_camera_debug.py")
-            raise Exception("Could not find any video devices on Ubuntu server")
-        
-        # Select the best camera (first working one)
-        best_camera = available_cameras[0]
-        self.camera_index = best_camera['index']
-        self.camera_backend = best_camera['backend']
-        
-        print(f"\n🎥 INITIALIZING UBUNTU SERVER CAMERA")
-        print(f"   📱 Port: /dev/video{self.camera_index}")
-        print(f"   🔧 Backend: {best_camera['backend_name']}")
-        print(f"   📊 Default: {best_camera['width']}x{best_camera['height']} @ {best_camera['fps']:.1f}fps")
+        # Based on diagnostic results: Camera 0 works perfectly
+        # Let's try a direct, simple approach first
+        self.camera_index = 0
+        self.camera_backend = cv.CAP_V4L2  # V4L2 backend works well on Ubuntu
         
         try:
-            # Use the specific backend that worked during detection
+            print(f"🔍 Attempting to open camera at index {self.camera_index} with V4L2 backend...")
             self.cap = cv.VideoCapture(self.camera_index, self.camera_backend)
             
             if self.cap.isOpened():
-                print(f"✅ Successfully opened camera at index {self.camera_index}")
-                
-                # Set optimal properties for Ubuntu server streaming
-                # Use 720p if supported, otherwise fall back to VGA
-                target_width = 1280 if best_camera['width'] >= 1280 else 640
-                target_height = 720 if best_camera['height'] >= 720 else 480
-                
-                print(f"🎯 Setting resolution to {target_width}x{target_height}")
-                
-                # Configure camera properties with Ubuntu-specific optimizations
-                self.cap.set(cv.CAP_PROP_FRAME_WIDTH, target_width)
-                self.cap.set(cv.CAP_PROP_FRAME_HEIGHT, target_height)
-                self.cap.set(cv.CAP_PROP_FPS, 15)  # Conservative FPS for stability
-                
-                # Ubuntu server optimizations
-                self.cap.set(cv.CAP_PROP_BUFFERSIZE, 1)  # Reduce latency
-                self.cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M', 'J', 'P', 'G'))  # MJPEG for performance
-                
-                # Additional Ubuntu-specific settings
-                try:
-                    self.cap.set(cv.CAP_PROP_AUTO_EXPOSURE, 0.25)  # Disable auto-exposure for consistency
-                    self.cap.set(cv.CAP_PROP_AUTOFOCUS, 0)  # Disable autofocus for stability
-                except:
-                    pass  # Some cameras don't support these properties
-                
-                # Give camera time to initialize
-                time.sleep(1.5)  # Longer delay for Ubuntu server
-                
-                # Verify the actual settings
-                actual_width = int(self.cap.get(cv.CAP_PROP_FRAME_WIDTH))
-                actual_height = int(self.cap.get(cv.CAP_PROP_FRAME_HEIGHT))
-                actual_fps = self.cap.get(cv.CAP_PROP_FPS)
-                buffer_size = int(self.cap.get(cv.CAP_PROP_BUFFERSIZE))
-                
-                print(f"📊 Camera Configuration Applied:")
-                print(f"   Resolution: {actual_width}x{actual_height}")
-                print(f"   FPS: {actual_fps:.1f}")
-                print(f"   Buffer Size: {buffer_size}")
-                print(f"   FOURCC: MJPG")
-                
-                # Test frame capture with retries
-                test_success = False
-                for attempt in range(3):
-                    ret, test_frame = self.cap.read()
-                    if ret and test_frame is not None:
-                        print(f"✅ Test frame captured successfully: {test_frame.shape}")
-                        test_success = True
-                        break
+                # Test frame capture immediately
+                ret, test_frame = self.cap.read()
+                if ret and test_frame is not None:
+                    print(f"✅ Successfully opened camera at index {self.camera_index}")
+                    print(f"   📱 Device: /dev/video{self.camera_index}")
+                    print(f"   🔧 Backend: V4L2")
+                    print(f"   📊 Test frame: {test_frame.shape[1]}x{test_frame.shape[0]}")
+                    
+                    # Configure camera properties based on diagnostic recommendations
+                    self.cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
+                    self.cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480) 
+                    self.cap.set(cv.CAP_PROP_FPS, 15)  # Conservative FPS for stability
+                    self.cap.set(cv.CAP_PROP_BUFFERSIZE, 1)  # Reduce latency
+                    self.cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M', 'J', 'P', 'G'))  # MJPEG for performance
+                    
+                    # Verify the actual settings
+                    actual_width = int(self.cap.get(cv.CAP_PROP_FRAME_WIDTH))
+                    actual_height = int(self.cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+                    actual_fps = self.cap.get(cv.CAP_PROP_FPS)
+                    
+                    print(f"📊 Camera Configuration Applied:")
+                    print(f"   Resolution: {actual_width}x{actual_height}")
+                    print(f"   FPS: {actual_fps:.1f}")
+                    print(f"   Buffer Size: 1")
+                    print(f"   Format: MJPEG")
+                    
+                    # Give camera time to initialize
+                    time.sleep(1.0)
+                    
+                    # Final test - capture a few frames to ensure stability
+                    test_success_count = 0
+                    for i in range(3):
+                        ret, _ = self.cap.read()
+                        if ret:
+                            test_success_count += 1
+                        time.sleep(0.1)
+                    
+                    if test_success_count >= 2:
+                        print(f"✅ Camera initialization successful! ({test_success_count}/3 test frames)")
+                        return
                     else:
-                        print(f"⚠️  Test frame attempt {attempt + 1}/3 failed")
-                        time.sleep(0.5)
-                
-                if not test_success:
-                    print("❌ Warning: Cannot capture test frames reliably")
-                    raise Exception("Camera opened but cannot capture frames")
-                
+                        print(f"⚠️  Camera unstable: only {test_success_count}/3 test frames captured")
+                        raise Exception("Camera opened but frame capture is unstable")
+                else:
+                    print("❌ Camera opened but cannot capture frames")
+                    raise Exception("Camera opened but cannot read frames")
             else:
-                raise Exception(f"Failed to open camera at index {self.camera_index} with backend {best_camera['backend_name']}")
+                print("❌ Failed to open camera with V4L2 backend")
+                raise Exception("Could not open camera")
                 
         except Exception as e:
-            print(f"❌ Error initializing Ubuntu server camera: {e}")
-            print("\n🔧 Try running the debug script: python3 ubuntu_camera_debug.py")
-            raise
+            print(f"❌ Camera initialization failed: {e}")
+            
+            # Fallback: Try the original complex method if simple method fails
+            print("🔄 Falling back to comprehensive camera detection...")
+            available_cameras = self._find_available_cameras(10)
+            
+            if not available_cameras:
+                print("❌ No cameras detected on the Ubuntu server")
+                print("\n🔧 Quick fixes to try:")
+                print("   sudo apt update && sudo apt install v4l-utils")
+                print("   sudo usermod -a -G video $USER")
+                print("   v4l2-ctl --list-devices")
+                print("   python3 ubuntu_camera_debug.py")
+                raise Exception("Could not find any video devices on Ubuntu server")
+            
+            # Select the best camera (first working one)
+            best_camera = available_cameras[0]
+            self.camera_index = best_camera['index']
+            self.camera_backend = best_camera['backend']
+            
+            print(f"\n🎥 FALLBACK: USING DETECTED CAMERA")
+            print(f"   📱 Port: /dev/video{self.camera_index}")
+            print(f"   🔧 Backend: {best_camera['backend_name']}")
+            print(f"   📊 Default: {best_camera['width']}x{best_camera['height']} @ {best_camera['fps']:.1f}fps")
+            
+            # Use the specific backend that worked during detection
+            self.cap = cv.VideoCapture(self.camera_index, self.camera_backend)
+            
+            if not self.cap.isOpened():
+                raise Exception(f"Failed to open camera at index {self.camera_index} with backend {best_camera['backend_name']}")
+                
+            print(f"✅ Successfully opened fallback camera at index {self.camera_index}")
+            
+            # Set optimal properties for Ubuntu server streaming
+            target_width = 640  # Use conservative resolution
+            target_height = 480
+            
+            print(f"🎯 Setting resolution to {target_width}x{target_height}")
+            
+            # Configure camera properties with Ubuntu-specific optimizations
+            self.cap.set(cv.CAP_PROP_FRAME_WIDTH, target_width)
+            self.cap.set(cv.CAP_PROP_FRAME_HEIGHT, target_height)
+            self.cap.set(cv.CAP_PROP_FPS, 15)  # Conservative FPS for stability
+            self.cap.set(cv.CAP_PROP_BUFFERSIZE, 1)  # Reduce latency
+            self.cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M', 'J', 'P', 'G'))  # MJPEG for performance
+            
+            # Give camera time to initialize
+            time.sleep(1.5)
+            
+            # Verify the actual settings
+            actual_width = int(self.cap.get(cv.CAP_PROP_FRAME_WIDTH))
+            actual_height = int(self.cap.get(cv.CAP_PROP_FRAME_HEIGHT))
+            actual_fps = self.cap.get(cv.CAP_PROP_FPS)
+            
+            print(f"📊 Fallback Camera Configuration Applied:")
+            print(f"   Resolution: {actual_width}x{actual_height}")
+            print(f"   FPS: {actual_fps:.1f}")
+            print(f"   Format: MJPEG")
+            
+            # Test frame capture
+            test_success = False
+            for attempt in range(3):
+                ret, test_frame = self.cap.read()
+                if ret and test_frame is not None:
+                    print(f"✅ Fallback test frame captured successfully: {test_frame.shape}")
+                    test_success = True
+                    break
+                else:
+                    print(f"⚠️  Fallback test frame attempt {attempt + 1}/3 failed")
+                    time.sleep(0.5)
+            
+            if not test_success:
+                print("❌ Warning: Fallback camera cannot capture test frames reliably")
+                raise Exception("Fallback camera opened but cannot capture frames")
 
     def _find_available_cameras(self, max_to_check=10):
         """Find available cameras on the system with detailed Ubuntu server debugging"""
