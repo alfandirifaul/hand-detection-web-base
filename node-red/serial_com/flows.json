@@ -1,5 +1,296 @@
 [
     {
+        "id": "hand-detection-flow",
+        "type": "tab",
+        "label": "Hand Detection",
+        "disabled": false,
+        "info": "Flow for processing hand detection data from Python"
+    },
+    {
+        "id": "f073f47f8e86641d",
+        "type": "http in",
+        "z": "hand-detection-flow",
+        "name": "Hand Detection Input",
+        "url": "/hand-detection",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 100,
+        "y": 300,
+        "wires": [
+            [
+                "0ce82e519618b1ca"
+            ]
+        ]
+    },
+    {
+        "id": "0ce82e519618b1ca",
+        "type": "json",
+        "z": "hand-detection-flow",
+        "name": "",
+        "property": "payload",
+        "action": "",
+        "pretty": false,
+        "x": 270,
+        "y": 300,
+        "wires": [
+            [
+                "4f96e230c5e7be41"
+            ]
+        ]
+    },
+    {
+        "id": "4f96e230c5e7be41",
+        "type": "function",
+        "z": "hand-detection-flow",
+        "name": "Process Hand Data",
+        "func": "const payload = msg.payload;\nconst type = typeof(payload) === 'string';\nconst data = type ? JSON.parse(payload).data : payload.data;\n\nlet isGreenBtn = null;\nlet isRedBtn = null;\n\nif(data.button && data.action) {\n    if(data.button === \"red\") {\n        isRedBtn = {\n            payload: true\n        }; \n    }\n    else if(data.button === \"green\") {\n        isGreenBtn = {\n            payload: true\n        };\n    }\n}\n\nreturn [\n    isGreenBtn,\n    isRedBtn\n];\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 300,
+        "wires": [
+            [
+                "4876c41ab538860a",
+                "f2df0a36a24f157e"
+            ],
+            [
+                "980ff94459af1702",
+                "ba4ab6da8071c146"
+            ]
+        ]
+    },
+    {
+        "id": "4876c41ab538860a",
+        "type": "debug",
+        "z": "hand-detection-flow",
+        "name": "OUT Green RAW",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 610,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "980ff94459af1702",
+        "type": "debug",
+        "z": "hand-detection-flow",
+        "name": "OUT Red RAW",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 600,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "5ac66657e4846bd7",
+        "type": "debug",
+        "z": "hand-detection-flow",
+        "name": "OUT Green",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1250,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "1b11828928bd1d43",
+        "type": "debug",
+        "z": "hand-detection-flow",
+        "name": "OUT Red",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1260,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "f914e3b10e9fbab3",
+        "type": "change",
+        "z": "hand-detection-flow",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "red",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1000,
+        "y": 320,
+        "wires": [
+            [
+                "1b11828928bd1d43",
+                "9962a3494beb1165"
+            ]
+        ]
+    },
+    {
+        "id": "3a6075416d7b828d",
+        "type": "change",
+        "z": "hand-detection-flow",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "green",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1000,
+        "y": 280,
+        "wires": [
+            [
+                "5ac66657e4846bd7",
+                "9962a3494beb1165"
+            ]
+        ]
+    },
+    {
+        "id": "9962a3494beb1165",
+        "type": "serial out",
+        "z": "hand-detection-flow",
+        "name": "",
+        "serial": "a87206ce492a1d44",
+        "x": 1270,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "f2df0a36a24f157e",
+        "type": "rbe",
+        "z": "hand-detection-flow",
+        "name": "",
+        "func": "rbe",
+        "gap": "",
+        "start": "",
+        "inout": "out",
+        "septopics": false,
+        "property": "payload",
+        "topi": "topic",
+        "x": 790,
+        "y": 280,
+        "wires": [
+            [
+                "3a6075416d7b828d"
+            ]
+        ]
+    },
+    {
+        "id": "b9a069cdec4488c9",
+        "type": "change",
+        "z": "hand-detection-flow",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 1000,
+        "y": 200,
+        "wires": [
+            [
+                "f2df0a36a24f157e"
+            ]
+        ]
+    },
+    {
+        "id": "50b687a0cb3d3b79",
+        "type": "inject",
+        "z": "hand-detection-flow",
+        "name": "",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "3",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 630,
+        "y": 120,
+        "wires": [
+            [
+                "b9a069cdec4488c9"
+            ]
+        ]
+    },
+    {
+        "id": "ba4ab6da8071c146",
+        "type": "rbe",
+        "z": "hand-detection-flow",
+        "name": "",
+        "func": "rbe",
+        "gap": "",
+        "start": "",
+        "inout": "out",
+        "septopics": false,
+        "property": "payload",
+        "topi": "topic",
+        "x": 790,
+        "y": 320,
+        "wires": [
+            [
+                "f914e3b10e9fbab3"
+            ]
+        ]
+    },
+    {
         "id": "e32cfbace954997b",
         "type": "inject",
         "z": "hand-detection-flow",
@@ -23,5 +314,52 @@
                 "bf2f4029f6f04adc"
             ]
         ]
+    },
+    {
+        "id": "bf2f4029f6f04adc",
+        "type": "change",
+        "z": "hand-detection-flow",
+        "name": "",
+        "rules": [
+            {
+                "t": "set",
+                "p": "payload",
+                "pt": "msg",
+                "to": "",
+                "tot": "str"
+            }
+        ],
+        "action": "",
+        "property": "",
+        "from": "",
+        "to": "",
+        "reg": false,
+        "x": 980,
+        "y": 480,
+        "wires": [
+            [
+                "ba4ab6da8071c146"
+            ]
+        ]
+    },
+    {
+        "id": "a87206ce492a1d44",
+        "type": "serial-port",
+        "name": "DOIT ESP32 DEVKIT V1",
+        "serialport": "/dev/tty.usbserial-0001",
+        "serialbaud": "115200",
+        "databits": 8,
+        "parity": "none",
+        "stopbits": 1,
+        "waitfor": "",
+        "dtr": "none",
+        "rts": "none",
+        "cts": "none",
+        "dsr": "none",
+        "newline": "\\n",
+        "bin": "false",
+        "out": "char",
+        "addchar": "",
+        "responsetimeout": 10000
     }
 ]
