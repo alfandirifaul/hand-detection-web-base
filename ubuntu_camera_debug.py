@@ -23,7 +23,8 @@ def check_system_info():
         with open('/etc/os-release', 'r') as f:
             for line in f:
                 if line.startswith('PRETTY_NAME'):
-                    print(f"OS: {line.split('=')[1].strip().strip('\"')}")
+                    os_name = line.split('=')[1].strip().strip('"')
+                    print(f"OS: {os_name}")
                     break
     except:
         print("OS: Unknown")
