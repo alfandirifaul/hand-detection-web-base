@@ -13,11 +13,14 @@ class Camera:
         print("🎥 Opening camera...")
         
         try:
-            # Simple camera initialization
-            self.cap = cv.VideoCapture(self.camera_index)
+            # Try with CAP_ANY backend to avoid V4L2 timeout issues
+            self.cap = cv.VideoCapture(self.camera_index, cv.CAP_ANY)
             
             if not self.cap.isOpened():
                 raise Exception("Could not open camera")
+            
+            # Give camera a moment to initialize
+            time.sleep(1.0)
             
             # Test if we can read frames
             ret, frame = self.cap.read()
