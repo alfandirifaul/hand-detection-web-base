@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hand Detection</title>
+    <title>Hand Detection - Server Camera</title>
+    <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Roboto+Mono:wght@400;500&display=swap');
-        
         * {
             font-family: 'Inter', sans-serif;
         }
@@ -17,7 +16,7 @@
             background: #0a0a0a;
             color: #f9fafb;
         }
-        
+
         .aurora-background {
             position: fixed;
             top: 0;
@@ -67,136 +66,98 @@
             0%, 100% { opacity: 0.3; }
             50% { opacity: 0.2; }
         }
-        
+
         .glass-card {
-            background: rgba(18, 18, 24, 0.7);
-            backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
-        }
-        
-        .elegant-button {
-            background: linear-gradient(135deg, rgba(56, 182, 255, 0.15), rgba(150, 54, 255, 0.15));
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(10px);
-            transition: all 0.2s ease;
-            position: relative;
-            overflow: hidden;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
         }
-        
+
+        .camera-card {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 0 0 1.5rem 1.5rem;
+            padding: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .elegant-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px 0 rgba(102, 126, 234, 0.4);
+        }
+
         .elegant-button:hover {
-            border-color: rgba(150, 54, 255, 0.3);
-            box-shadow: 0 2px 15px rgba(76, 29, 149, 0.15);
-            transform: translateY(-1px);
+            transform: translateY(-2px);
+            box-shadow: 0 7px 25px 0 rgba(102, 126, 234, 0.6);
         }
-        
+
         .stop-button {
-            background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(153, 27, 27, 0.15));
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            box-shadow: 0 4px 15px 0 rgba(245, 87, 108, 0.4);
         }
-        
+
         .stop-button:hover {
-            border-color: rgba(239, 68, 68, 0.3);
-            box-shadow: 0 2px 15px rgba(153, 27, 27, 0.15);
+            box-shadow: 0 7px 25px 0 rgba(245, 87, 108, 0.6);
         }
-        
+
         .status-pill {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 4px 12px;
-            border-radius: 20px;
-            background: rgba(18, 18, 24, 0.6);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            transition: all 0.3s ease;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 9999px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         .status-dot {
-            transition: all 0.5s ease;
+            animation: status-pulse 2s infinite;
         }
-        
+
         .status-active {
             background: #10b981;
-            box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
-            animation: pulse 2s infinite;
+            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
         }
-        
+
         .status-inactive {
             background: #6b7280;
         }
 
         .status-error {
             background: #ef4444;
-            box-shadow: 0 0 12px rgba(239, 68, 68, 0.4);
-        }
-        
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.8; }
-            100% { transform: scale(1); opacity: 1; }
-        }
-        
-        .camera-card {
-            background: #000;
-            border: 1px solid rgba(255, 255, 255, 0.06);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-            transition: all 0.3s ease;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
         }
 
-        .camera-card:hover {
-            border-color: rgba(56, 182, 255, 0.3);
-        }
-
-        .info-panel {
-            background: rgba(17, 24, 39, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        }
-        
-        .info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            padding: 8px 16px;
-            transition: all 0.2s ease;
-        }
-
-        .info-value {
-            font-family: 'Roboto Mono', monospace;
-            font-weight: 500;
-            transition: all 0.2s ease;
-        }
-
-        .info-label {
-            opacity: 0.6;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+        @keyframes status-pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
         }
 
         .metric-card {
-            background: rgba(30, 41, 59, 0.4);
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 0.75rem;
             transition: all 0.3s ease;
         }
 
         .metric-card:hover {
-            background: rgba(30, 41, 59, 0.5);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(255, 255, 255, 0.15);
         }
 
         .metric-value {
-            font-family: 'Roboto Mono', monospace;
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 1.25rem;
         }
 
         .button-indicator {
             transition: all 0.3s ease;
-            opacity: 0;
         }
 
         .button-indicator.active {
@@ -209,206 +170,6 @@
             50% { opacity: 1; }
         }
     </style>
-    <script>
-        let socket;
-        let video;
-        let canvas;
-        let processedFeed;
-        let streaming = false;
-        const FPS = 15;
-        let frameInterval;
-        let lastFrameTime = 0;
-        let currentFps = 0;
-        let sessionStartTime = 0;
-        let handData = {
-            num_hands: 0,
-            buttons_active: false,
-            touched_button: null
-        };
-
-        // Elegant and informative placeholder SVG
-        const PLACEHOLDER_SVG = `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQwIiBoZWlnaHQ9IjQ4MCIgdmlld0JveD0iMCAwIDY0MCA0ODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjY0MCIgaGVpZ2h0PSI0ODAiIGZpbGw9IiMwYzBjMGMiLz4KICA8cGF0aCBkPSJNMzIwIDIwMEM0MTcuMyAyMDAgNDk2IDIyNi45IDQ5NiAyNjBDNDk2IDI5My4xIDQxNy4zIDMyMCAzMjAgMzIwQzIyMi43IDMyMCAxNDQgMjkzLjEgMTQ0IDI2MEMxNDQgMjI2LjkgMjIyLjcgMjAwIDMyMCAyMDAiIHN0cm9rZT0iIzMzMzMzMyIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CiAgPHBhdGggZD0iTTMyMCAxNjBDMzY0LjIgMTYwIDQwMCAxOTUuOCA0MDAgMjQwQzQwMCAyODQuMiAzNjQuMiAzMjAgMzIwIDMyMEMyNzUuOCAzMjAgMjQwIDI4NC4yIDI0MCAyNDBDMjQwIDE5NS44IDI3NS44IDE2MCAzMjAgMTYwIiBzdHJva2U9IiM0NDQ0NDQiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgogIDxjaXJjbGUgY3g9IjMyMCIgY3k9IjI0MCIgcj0iNDAiIHN0cm9rZT0iIzU1NTU1NSIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CiAgPGNpcmNsZSBjeD0iMzIwIiBjeT0iMjQwIiByPSI4IiBmaWxsPSIjNjY2NjY2Ii8+CiAgPHRleHQgeD0iMzIwIiB5PSIzMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNhYWFhYWEiIGZvbnQtZmFtaWx5PSJJbnRlciIgZm9udC1zaXplPSIxNCI+Q2FtZXJhIHJlYWR5PC90ZXh0PgogIDx0ZXh0IHg9IjMyMCIgeT0iMzI1IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2NjY2IiBmb250LWZhbWlseT0iSW50ZXIiIGZvbnQtc2l6ZT0iMTIiPkNsaWNrIFN0YXJ0IHRvIGJlZ2luIGhhbmQgZGV0ZWN0aW9uPC90ZXh0PgogIDxwYXRoIGQ9Ik0yNjAgMjQwSDM4MCIgc3Ryb2tlPSIjMzMzMzMzIiBzdHJva2Utd2lkdGg9IjEiLz4KICA8cGF0aCBkPSJNMzIwIDE4MEwzMjAgMzAwIiBzdHJva2U9IiMzMzMzMzMiIHN0cm9rZS13aWR0aD0iMSIvPgo8L3N2Zz4K`;
-
-        document.addEventListener('DOMContentLoaded', function() {
-            video = document.getElementById('camera-feed');
-            canvas = document.getElementById('canvas');
-            processedFeed = document.getElementById('processed-feed');
-            
-            socket = io();
-            
-            socket.on('processed_frame', function(data) {
-                if (typeof data === 'object' && data.image) {
-                    processedFeed.src = data.image;
-                    
-                    // Update detection data
-                    if (data.detection_data) {
-                        handData = data.detection_data;
-                        updateDashboard(data.detection_data);
-                    }
-                    
-                    // Calculate FPS
-                    const now = performance.now();
-                    if (lastFrameTime) {
-                        const deltaTime = now - lastFrameTime;
-                        currentFps = Math.round(1000 / deltaTime);
-                        document.getElementById('fps-value').textContent = currentFps;
-                    }
-                    lastFrameTime = now;
-                } else {
-                    processedFeed.src = data;
-                }
-            });
-            
-            document.getElementById('start-btn').addEventListener('click', startCamera);
-            document.getElementById('stop-btn').addEventListener('click', stopCamera);
-
-            // Start session time counter
-            setInterval(updateSessionTime, 1000);
-        });
-
-        function startCamera() {
-            if (streaming) return;
-            
-            // Update UI to show loading state
-            document.getElementById('status').textContent = 'Starting...';
-            document.getElementById('dot').className = 'w-2 h-2 rounded-full status-inactive';
-            
-            navigator.mediaDevices.getUserMedia({ 
-                video: { width: 640, height: 480 }
-            })
-            .then(stream => {
-                video.srcObject = stream;
-                video.play();
-                streaming = true;
-                
-                canvas.width = 640;
-                canvas.height = 480;
-                
-                frameInterval = setInterval(captureFrame, 1000/FPS);
-                
-                // Set session start time
-                sessionStartTime = Date.now();
-                
-                updateUI();
-            })
-            .catch(err => {
-                console.error("Camera error: " + err);
-                updateStatus('error');
-            });
-        }
-
-        function stopCamera() {
-            if (!streaming) return;
-            
-            clearInterval(frameInterval);
-            
-            if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
-            }
-            
-            video.srcObject = null;
-            streaming = false;
-            
-            // Reset the processed feed to the placeholder
-            processedFeed.src = PLACEHOLDER_SVG;
-            
-            // Reset metrics
-            document.getElementById('num-hands').textContent = '0';
-            document.getElementById('fps-value').textContent = '0';
-            
-            // Reset button indicators
-            updateButtonIndicators(null);
-            
-            updateUI();
-        }
-        
-        function captureFrame() {
-            if (!streaming) return;
-            
-            const context = canvas.getContext('2d');
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            const imageData = canvas.toDataURL('image/jpeg', 0.8);
-            socket.emit('frame', imageData);
-        }
-        
-        function updateUI() {
-            const startBtn = document.getElementById('start-btn');
-            const stopBtn = document.getElementById('stop-btn');
-            const status = document.getElementById('status');
-            const dot = document.getElementById('dot');
-            const cameraStatus = document.getElementById('camera-status');
-            
-            if (streaming) {
-                startBtn.style.display = 'none';
-                stopBtn.style.display = 'flex';
-                status.textContent = 'Active';
-                status.className = 'text-emerald-400 text-sm';
-                dot.className = 'w-2 h-2 rounded-full status-active status-dot';
-                cameraStatus.textContent = 'Camera Active';
-                cameraStatus.className = 'text-xs text-emerald-400';
-            } else {
-                startBtn.style.display = 'flex';
-                stopBtn.style.display = 'none';
-                status.textContent = 'Ready';
-                status.className = 'text-gray-400 text-sm';
-                dot.className = 'w-2 h-2 rounded-full status-inactive status-dot';
-                cameraStatus.textContent = 'Camera Ready';
-                cameraStatus.className = 'text-xs text-gray-400';
-            }
-        }
-        
-        function updateStatus(type) {
-            const status = document.getElementById('status');
-            const dot = document.getElementById('dot');
-            const cameraStatus = document.getElementById('camera-status');
-            
-            if (type === 'error') {
-                status.textContent = 'Camera error';
-                status.className = 'text-red-400 text-sm';
-                dot.className = 'w-2 h-2 rounded-full status-error status-dot';
-                cameraStatus.textContent = 'Camera Error';
-                cameraStatus.className = 'text-xs text-red-400';
-            }
-        }
-        
-        function updateSessionTime() {
-            if (!streaming || !sessionStartTime) return;
-            
-            const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
-            const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
-            const seconds = (elapsed % 60).toString().padStart(2, '0');
-            
-            document.getElementById('session-time').textContent = `${minutes}:${seconds}`;
-        }
-        
-        function updateDashboard(data) {
-            // Update hands count
-            document.getElementById('num-hands').textContent = data.num_hands || '0';
-            
-            // Update finger count
-            document.getElementById('fingers-count').textContent = data.fingers_count || '0';
-            
-            // Update button indicators
-            updateButtonIndicators(data.touched_button);
-        }
-        
-        function updateButtonIndicators(touchedButton) {
-            const greenIndicator = document.getElementById('green-indicator');
-            const redIndicator = document.getElementById('red-indicator');
-            
-            // Reset both indicators
-            greenIndicator.classList.remove('active');
-            redIndicator.classList.remove('active');
-            
-            // Activate the touched one
-            if (touchedButton === 'green') {
-                greenIndicator.classList.add('active');
-            } else if (touchedButton === 'red') {
-                redIndicator.classList.add('active');
-            }
-        }
-    </script>
 </head>
 <body class="min-h-screen">
     <div class="aurora-background"></div>
@@ -417,7 +178,7 @@
             <!-- Header -->
             <div class="text-center mb-6">
                 <h1 class="text-3xl font-bold text-white mb-2">Hand Detection</h1>
-                <p class="text-gray-400 text-sm">AI-powered gesture recognition system</p>
+                <p class="text-gray-400 text-sm">AI-powered gesture recognition system with server camera</p>
             </div>
 
             <div class="flex flex-col lg:flex-row gap-6">
@@ -469,8 +230,8 @@
                     <!-- Camera Card -->
                     <div class="glass-card rounded-3xl overflow-hidden">
                         <div class="flex items-center justify-between px-4 py-2">
-                            <h2 class="text-sm font-medium text-gray-300">Camera Feed</h2>
-                            <span id="camera-status" class="text-xs text-gray-400">Camera Ready</span>
+                            <h2 class="text-sm font-medium text-gray-300">Server Camera Feed</h2>
+                            <span id="camera-status" class="text-xs text-gray-400">Server Camera Ready</span>
                         </div>
                         <div class="camera-card">
                             <img id="processed-feed" 
@@ -524,11 +285,210 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- Hidden Elements -->
-            <video id="camera-feed" class="hidden"></video>
-            <canvas id="canvas" class="hidden"></canvas>
         </div>
     </div>
+
+    <script>
+        // Constants
+        const PLACEHOLDER_SVG = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQwIiBoZWlnaHQ9IjQ4MCIgdmlld0JveD0iMCAwIDY0MCA0ODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjY0MCIgaGVpZ2h0PSI0ODAiIGZpbGw9IiMwYzBjMGMiLz4KICA8cGF0aCBkPSJNMzIwIDIwMEM0MTcuMyAyMDAgNDk2IDIyNi45IDQ5NiAyNjBDNDk2IDI5My4xIDQxNy4zIDMyMCAzMjAgMzIwQzIyMi43IDMyMCAxNDQgMjkzLjEgMTQ0IDI2MEMxNDQgMjI2LjkgMjIyLjcgMjAwIDMyMCAyMDAiIHN0cm9rZT0iIzMzMzMzMyIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CiAgPHBhdGggZD0iTTMyMCAxNjBDMzY0LjIgMTYwIDQwMCAxOTUuOCA0MDAgMjQwQzQwMCAyODQuMiAzNjQuMiAzMjAgMzIwIDMyMEMyNzUuOCAzMjAgMjQwIDI4NC4yIDI0MCAyNDBDMjQwIDE5NS44IDI3NS44IDE2MCAzMjAgMTYwIiBzdHJva2U9IiM0NDQ0NDQiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgogIDxjaXJjbGUgY3g9IjMyMCIgY3k9IjI0MCIgcj0iNDAiIHN0cm9rZT0iIzU1NTU1NSIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CiAgPGNpcmNsZSBjeD0iMzIwIiBjeT0iMjQwIiByPSI4IiBmaWxsPSIjNjY2NjY2Ii8+CiAgPHRleHQgeD0iMzIwIiB5PSIzMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNhYWFhYWEiIGZvbnQtZmFtaWx5PSJJbnRlciIgZm9udC1zaXplPSIxNCI+Q2FtZXJhIHJlYWR5PC90ZXh0PgogIDx0ZXh0IHg9IjMyMCIgeT0iMzI1IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2NjY2IiBmb250LWZhbWlseT0iSW50ZXIiIGZvbnQtc2l6ZT0iMTIiPkNsaWNrIFN0YXJ0IHRvIGJlZ2luIGhhbmQgZGV0ZWN0aW9uPC90ZXh0PgogIDxwYXRoIGQ9Ik0yNjAgMjQwSDM4MCIgc3Ryb2tlPSIjMzMzMzMzIiBzdHJva2Utd2lkdGg9IjEiLz4KICA8cGF0aCBkPSJNMzIwIDE4MEwzMjAgMzAwIiBzdHJva2U9IiMzMzMzMzMiIHN0cm9rZS13aWR0aD0iMSIvPgo8L3N2Zz4K';
+        
+        // Global variables
+        let socket;
+        let streaming = false;
+        let processedFeed;
+        let greenIndicator;
+        let redIndicator;
+        let lastFrameTime = null;
+        let currentFps = 0;
+        let sessionStartTime = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Socket.IO
+            socket = io();
+            
+            // Initialize elements
+            processedFeed = document.getElementById('processed-feed');
+            greenIndicator = document.getElementById('green-indicator');
+            redIndicator = document.getElementById('red-indicator');
+            
+            // Button event listeners
+            document.getElementById('start-btn').addEventListener('click', startStream);
+            document.getElementById('stop-btn').addEventListener('click', stopStream);
+            
+            // Socket connection handlers
+            socket.on('connect', function() {
+                console.log('Connected to server');
+                updateStatus('ready');
+            });
+            
+            socket.on('disconnect', function() {
+                console.log('Disconnected from server');
+                updateStatus('error');
+                streaming = false;
+                updateUI();
+            });
+            
+            // Socket event handlers for frames - unified handler for all frame types
+            socket.on('processed_frame', handleFrame);
+            socket.on('server_frame', handleFrame);
+            
+            // Start session time counter
+            setInterval(updateSessionTime, 1000);
+        });
+        
+        function handleFrame(data) {
+            if (data && data.image) {
+                processedFeed.src = data.image;
+                
+                // Update detection data if available
+                if (data.detection_data) {
+                    updateDetectionData(data.detection_data);
+                }
+                
+                // Calculate FPS
+                const now = performance.now();
+                if (lastFrameTime) {
+                    const deltaTime = now - lastFrameTime;
+                    currentFps = Math.round(1000 / deltaTime);
+                    document.getElementById('fps-value').textContent = currentFps;
+                }
+                lastFrameTime = now;
+            } else if (typeof data === 'string') {
+                // Handle base64 image data directly
+                processedFeed.src = data;
+            }
+        }
+        
+        function startStream() {
+            if (streaming) return;
+            
+            console.log('Starting server camera stream...');
+            updateStatus('starting');
+            
+            streaming = true;
+            sessionStartTime = Date.now();
+            
+            // Request server to start camera streaming
+            socket.emit('start_stream');
+            
+            // Update UI
+            updateUI();
+        }
+        
+        function stopStream() {
+            if (!streaming) return;
+            
+            console.log('Stopping server camera stream...');
+            streaming = false;
+            
+            // Tell server to stop streaming
+            socket.emit('stop_stream');
+            
+            processedFeed.src = PLACEHOLDER_SVG;
+            updateStatus('ready');
+            
+            // Reset metrics
+            document.getElementById('num-hands').textContent = '0';
+            document.getElementById('fingers-count').textContent = '0';
+            document.getElementById('fps-value').textContent = '0';
+            
+            // Reset button indicators
+            updateButtonIndicators(null);
+            
+            // Update UI
+            updateUI();
+        }
+        
+        function updateStatus(status) {
+            const statusElement = document.getElementById('status');
+            const dotElement = document.getElementById('dot');
+            const cameraStatusElement = document.getElementById('camera-status');
+            
+            switch(status) {
+                case 'ready':
+                    statusElement.textContent = 'Ready';
+                    statusElement.className = 'text-gray-400 text-sm';
+                    dotElement.className = 'w-2 h-2 rounded-full status-inactive status-dot';
+                    cameraStatusElement.textContent = 'Server Camera Ready';
+                    cameraStatusElement.className = 'text-xs text-gray-400';
+                    break;
+                    
+                case 'active':
+                    statusElement.textContent = 'Active';
+                    statusElement.className = 'text-emerald-400 text-sm';
+                    dotElement.className = 'w-2 h-2 rounded-full status-active status-dot';
+                    cameraStatusElement.textContent = 'Streaming Active';
+                    cameraStatusElement.className = 'text-xs text-emerald-400';
+                    break;
+                    
+                case 'starting':
+                    statusElement.textContent = 'Starting...';
+                    statusElement.className = 'text-yellow-400 text-sm';
+                    dotElement.className = 'w-2 h-2 rounded-full status-inactive status-dot';
+                    cameraStatusElement.textContent = 'Starting Stream...';
+                    cameraStatusElement.className = 'text-xs text-yellow-400';
+                    break;
+                    
+                case 'error':
+                    statusElement.textContent = 'Error';
+                    statusElement.className = 'text-red-400 text-sm';
+                    dotElement.className = 'w-2 h-2 rounded-full status-error status-dot';
+                    cameraStatusElement.textContent = 'Camera Error';
+                    cameraStatusElement.className = 'text-xs text-red-400';
+                    break;
+            }
+        }
+        
+        function updateUI() {
+            const startBtn = document.getElementById('start-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            
+            if (streaming) {
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'flex';
+                updateStatus('active');
+            } else {
+                startBtn.style.display = 'flex';
+                stopBtn.style.display = 'none';
+            }
+        }
+        
+        function updateSessionTime() {
+            if (!streaming || !sessionStartTime) {
+                document.getElementById('session-time').textContent = '00:00';
+                return;
+            }
+            
+            const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+            const seconds = (elapsed % 60).toString().padStart(2, '0');
+            
+            document.getElementById('session-time').textContent = `${minutes}:${seconds}`;
+        }
+        
+        function updateDetectionData(data) {
+            // Update number of hands detected
+            document.getElementById('num-hands').textContent = data.num_hands || 0;
+            
+            // Update finger count
+            document.getElementById('fingers-count').textContent = data.fingers_count || 0;
+            
+            // Update button indicators
+            updateButtonIndicators(data.touched_button);
+        }
+        
+        function updateButtonIndicators(touchedButton) {
+            // Reset both indicators
+            greenIndicator.classList.remove('active');
+            redIndicator.classList.remove('active');
+            
+            // Activate the touched one
+            if (touchedButton === 'green') {
+                greenIndicator.classList.add('active');
+            } else if (touchedButton === 'red') {
+                redIndicator.classList.add('active');
+            }
+        }
+    </script>
 </body>
 </html>
