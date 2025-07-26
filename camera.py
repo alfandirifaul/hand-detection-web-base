@@ -9,27 +9,59 @@ class Camera:
         self.camera_index = 0
         self.camera_backend = cv.CAP_V4L2  # V4L2 backend confirmed working
         self.cap = None
+        
+        # Try multiple backends if needed
+        self.backends_to_try = [
+            (cv.CAP_V4L2, "V4L2"),
+            (cv.CAP_ANY, "CAP_ANY"),
+            (cv.CAP_GSTREAMER, "GStreamer"),
+        ]
+        
         self.init_camera()
 
     def init_camera(self):
         print("🎥 INITIALIZING UBUNTU SERVER CAMERA")
         
-        try:
-            print(f"🔍 Opening camera at index {self.camera_index} with V4L2 backend...")
-            self.cap = cv.VideoCapture(self.camera_index, self.camera_backend)
-            
-            if not self.cap.isOpened():
-                print("❌ Failed to open camera with V4L2, trying with CAP_ANY...")
-                self.camera_backend = cv.CAP_ANY
-                self.cap = cv.VideoCapture(self.camera_index, self.camera_backend)
-            
-            if self.cap.isOpened():
-                # Test frame capture immediately
-                ret, test_frame = self.cap.read()
+        for backend, backend_name in self.backends_to_try:
+            try:
+                print(f"🔍 Trying {backend_name} backend for camera at index {self.camera_index}...")
+                self.cap = cv.VideoCapture(self.camera_index, backend)
+                
+                if not self.cap.isOpened():
+                    print(f"❌ Failed to open camera with {backend_name}")
+                    continue
+                
+                # Give camera extra time to initialize before first read
+                print("⏳ Waiting for camera to stabilize...")
+                time.sleep(2.0)
+                
+                # Set basic properties first to help with stability
+                self.cap.set(cv.CAP_PROP_BUFFERSIZE, 1)
+                self.cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
+                self.cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
+                time.sleep(0.5)
+                
+                # Try multiple frame reads with increasing timeouts
+                test_frame = None
+                ret = False
+                for attempt in range(5):
+                    print(f"📹 Frame capture attempt {attempt + 1}/5...")
+                    ret, test_frame = self.cap.read()
+                    if ret and test_frame is not None:
+                        print(f"✅ Successfully captured frame on attempt {attempt + 1}")
+                        break
+                    else:
+                        print(f"⚠️  Attempt {attempt + 1} failed, retrying...")
+                        time.sleep(1.0)
+                        # Clear buffer
+                        for _ in range(3):
+                            self.cap.read()
+                
                 if ret and test_frame is not None:
+                    self.camera_backend = backend
                     print(f"✅ Successfully opened camera at index {self.camera_index}")
                     print(f"   📱 Device: /dev/video{self.camera_index}")
-                    print(f"   🔧 Backend: {self.cap.getBackendName()}")
+                    print(f"   🔧 Backend: {backend_name}")
                     print(f"   📊 Test frame: {test_frame.shape[1]}x{test_frame.shape[0]}")
                     
                     # Configure camera properties (conservative settings)
@@ -69,23 +101,30 @@ class Camera:
                         print(f"✅ Camera initialization successful! ({test_success_count}/3 test frames)")
                         return  # Success!
                     else:
-                        print(f"⚠️  Camera unstable: only {test_success_count}/3 test frames captured")
-                        raise Exception("Camera opened but frame capture is unstable")
+                        print(f"⚠️  Camera unstable with {backend_name}: only {test_success_count}/3 test frames captured")
+                        self.cap.release()
+                        continue
                 else:
-                    print("❌ Camera opened but cannot capture frames")
-                    raise Exception("Camera opened but cannot read frames")
-            else:
-                print("❌ Failed to open camera")
-                raise Exception("Could not open camera")
-                
-        except Exception as e:
-            print(f"❌ Camera initialization failed: {e}")
-            print("🔧 Troubleshooting suggestions:")
-            print("   1. Check camera connection: lsusb | grep -i camera")
-            print("   2. Check video devices: ls -la /dev/video*")
-            print("   3. Test manually: python3 ubuntu_camera_debug.py")
-            print("   4. Kill any processes using camera: sudo fuser -k /dev/video0")
-            raise Exception(f"Camera initialization failed: {e}")
+                    print(f"❌ {backend_name} backend opened camera but cannot capture frames")
+                    self.cap.release()
+                    continue
+                    
+            except Exception as e:
+                print(f"❌ {backend_name} backend failed: {e}")
+                if self.cap:
+                    self.cap.release()
+                continue
+        
+        # If we get here, all backends failed
+        print(f"❌ Camera initialization failed with all backends")
+        print("🔧 Troubleshooting suggestions:")
+        print("   1. Check camera connection: lsusb | grep -i camera")
+        print("   2. Check video devices: ls -la /dev/video*")
+        print("   3. Test manually: python3 ubuntu_camera_debug.py")
+        print("   4. Kill any processes using camera: sudo fuser -k /dev/video0")
+        print("   5. Try different USB port")
+        print("   6. Check camera permissions: sudo usermod -a -G video $USER")
+        raise Exception(f"Camera initialization failed with all available backends")
 
     def openCamera(self):
         """Reopen camera if it was closed"""

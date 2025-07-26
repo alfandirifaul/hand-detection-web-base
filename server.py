@@ -21,9 +21,10 @@ handDataClient = NodeRedClient(
 )
 
 # Initialize camera
-camera = Camera()
+camera = None
 try:
     print("🎥 Attempting to initialize camera on Ubuntu server...")
+    camera = Camera()
     print("✅ Camera initialized successfully")
     print(f"📱 Camera status: {'opened' if camera.is_opened() else 'closed'}")
 except Exception as e:
@@ -34,7 +35,9 @@ except Exception as e:
     print("   3. Install v4l-utils: sudo apt install v4l-utils")
     print("   4. Check permissions: sudo usermod -a -G video $USER")
     print("   5. Run debug script: python3 ubuntu_camera_debug.py")
+    print("   6. Try different USB port")
     print("🌐 Proceeding with web-only camera mode")
+    camera = None
 
 # Initialize hand detector
 handDetector = HandDetection(nodeRedClient=handDataClient)
