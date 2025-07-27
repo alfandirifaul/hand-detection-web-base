@@ -17,7 +17,6 @@ class Camera:
         ret, frame = self.cap.read()
 
         if ret and frame is not None:
-            print(f"   ✅ Camera opened successfully with backend {backend}")
             print(f"   📐 Resolution: {int(self.cap.get(cv.CAP_PROP_FRAME_WIDTH))}x{int(self.cap.get(cv.CAP_PROP_FRAME_HEIGHT))}")
             print(f"   🎬 FPS: {self.cap.get(cv.CAP_PROP_FPS)}")
             return
