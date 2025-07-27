@@ -11,56 +11,24 @@ class Camera:
     def init_camera(self):
         """Initialize camera with proper error handling"""
         print("🎥 Opening camera...")
+
+        if not self.cap.isOpened():
+            print("   Camera not opened, attempting to initialize...")
+            self.init_camera()
+            return
         
-        # Try different backends in order of preference
-        backends = [
-            cv.CAP_V4L2,    # Linux default
-            cv.CAP_GSTREAMER,  # Alternative for Linux
-            cv.CAP_ANY      # Let OpenCV choose
-        ]
-        
-        for backend in backends:
-            try:
-                print(f"   Trying backend: {backend}")
-                self.cap = cv.VideoCapture(self.camera_index, backend)
-                
-                if not self.cap.isOpened():
-                    print(f"   ❌ Failed to open with backend {backend}")
-                    continue
-                
-                # Set buffer size to reduce latency
-                self.cap.set(cv.CAP_PROP_BUFFERSIZE, 1)
-                
-                # Set reasonable resolution
-                self.cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
-                self.cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
-                
-                # Set FPS
-                self.cap.set(cv.CAP_PROP_FPS, 30)
-                
-                # Give camera time to warm up
-                time.sleep(1)
-                
-                # Test if we can read a frame
-                ret, frame = self.cap.read()
-                if ret and frame is not None:
-                    print(f"   ✅ Camera opened successfully with backend {backend}")
-                    print(f"   📐 Resolution: {int(self.cap.get(cv.CAP_PROP_FRAME_WIDTH))}x{int(self.cap.get(cv.CAP_PROP_FRAME_HEIGHT))}")
-                    print(f"   🎬 FPS: {self.cap.get(cv.CAP_PROP_FPS)}")
-                    return  # Success!
-                else:
-                    print(f"   ❌ Cannot read frames with backend {backend}")
-                    self.cap.release()
-                    self.cap = None
-                    
-            except Exception as e:
-                print(f"   ❌ Exception with backend {backend}: {e}")
-                if self.cap:
-                    self.cap.release()
-                    self.cap = None
-        
-        # If we get here, all backends failed
-        raise Exception("Could not initialize camera with any backend")
+        ret, frame = self.cap.read()
+
+        if ret and frame is not None:
+            print(f"   ✅ Camera opened successfully with backend {backend}")
+            print(f"   📐 Resolution: {int(self.cap.get(cv.CAP_PROP_FRAME_WIDTH))}x{int(self.cap.get(cv.CAP_PROP_FRAME_HEIGHT))}")
+            print(f"   🎬 FPS: {self.cap.get(cv.CAP_PROP_FPS)}")
+            return
+        else:
+            print("   ❌ Failed to read frame from camera")
+            if self.cap:
+                self.cap.release()
+                self.cap = None
 
     def get_frame(self):
         """Get a frame from the camera"""
