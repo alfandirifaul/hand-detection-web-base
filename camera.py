@@ -12,58 +12,17 @@ class Camera:
         """Initialize camera with proper error handling"""
         print("🎥 Opening camera...")
         
-        # Try multiple camera indices and backends
-        camera_indices = [0, 1, 2]
-        backends = [cv.CAP_V4L2, cv.CAP_GSTREAMER, cv.CAP_ANY]
-        
-        for index in camera_indices:
-            for backend in backends:
-                print(f"   🔍 Trying camera index {index} with backend {backend}...")
-                
-                try:
-                    self.cap = cv.VideoCapture(index, backend)
-                    
-                    if not self.cap.isOpened():
-                        if self.cap:
-                            self.cap.release()
-                            self.cap = None
-                        continue
-                    
-                    # Test if we can actually read a frame
-                    ret, frame = self.cap.read()
-                    
-                    if ret and frame is not None:
-                        print(f"   ✅ Camera opened successfully on index {index}")
-                        print(f"   📐 Resolution: {int(self.cap.get(cv.CAP_PROP_FRAME_WIDTH))}x{int(self.cap.get(cv.CAP_PROP_FRAME_HEIGHT))}")
-                        print(f"   🎬 FPS: {self.cap.get(cv.CAP_PROP_FPS)}")
-                        self.camera_index = index
-                        return True
-                    else:
-                        print(f"   ❌ Camera index {index} opened but failed to read frame")
-                        if self.cap:
-                            self.cap.release()
-                            self.cap = None
-                            
-                except Exception as e:
-                    print(f"   ❌ Exception with camera {index}: {e}")
-                    if self.cap:
-                        self.cap.release()
-                        self.cap = None
-        
-        print("   ❌ Failed to initialize any camera")
-        self.cap = None
-        return False
-
-    def get_frame(self):        
-        if self.cap is None:
-            print("⚠️  Camera not initialized")
-            return None
-            
+        self.cap = cv.VideoCapture(self.camera_index)
         if not self.cap.isOpened():
-            print("⚠️  Camera not opened")
-            return None
-            
+            print("❌ Failed to open camera")
+            return False
+
+        print("✅ Camera opened successfully")
+        return True
+
+    def get_frame(self):
         ret, frame = self.cap.read()
+        cv.imshow("Camera Feed", frame)
         if not ret or frame is None:
             print("⚠️  Failed to read frame")
             return None
