@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hand Detection - Server Camera</title>
+    <title>Hand Detection Dashboard</title>
     <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -36,7 +36,7 @@
             height: 100%;
             border-radius: 40%;
             opacity: 0.2;
-            filter: blur(60px);
+            filter: blur(80px);
             transform: translateZ(0);
         }
         
@@ -54,7 +54,7 @@
         
         @keyframes aurora-move {
             0% { transform: translate(-5%, -5%) rotate(0deg); }
-            100% { transform: translate(5%, 5%) rotate(360deg); }
+            100% { transform: translate(5%, 5%) rotate(10deg); }
         }
 
         @keyframes aurora-pulse-1 {
@@ -69,16 +69,10 @@
 
         .glass-card {
             background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-        }
-
-        .camera-card {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 0 0 1.5rem 1.5rem;
-            padding: 1rem;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
         }
 
         .elegant-button {
@@ -116,27 +110,13 @@
             animation: status-pulse 2s infinite;
         }
 
-        .status-active {
-            background: #10b981;
-            box-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
-        }
-
-        .status-inactive {
-            background: #6b7280;
-        }
-
-        .status-error {
-            background: #ef4444;
-            box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
-        }
+        .status-active { background: #10b981; box-shadow: 0 0 10px rgba(16, 185, 129, 0.5); }
+        .status-inactive { background: #6b7280; }
+        .status-error { background: #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.5); }
 
         @keyframes status-pulse {
-            0%, 100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.5;
-            }
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
 
         .metric-card {
@@ -150,16 +130,7 @@
             background: rgba(255, 255, 255, 0.08);
             border-color: rgba(255, 255, 255, 0.15);
         }
-
-        .metric-value {
-            font-weight: 600;
-            font-size: 1.25rem;
-        }
-
-        .button-indicator {
-            transition: all 0.3s ease;
-        }
-
+        
         .button-indicator.active {
             opacity: 1;
             animation: indicator-pulse 1.5s infinite;
@@ -173,18 +144,18 @@
 </head>
 <body class="min-h-screen">
     <div class="aurora-background"></div>
-    <div class="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 relative">
-        <div class="w-full max-w-4xl">
-            <!-- Header -->
-            <div class="text-center mb-6">
-                <h1 class="text-3xl font-bold text-white mb-2">Hand Detection</h1>
-                <p class="text-gray-400 text-sm">AI-powered gesture recognition system with server camera</p>
-            </div>
 
-            <div class="flex flex-col lg:flex-row gap-6">
-                <!-- Left Column - Info Panel -->
-                <div class="w-full lg:w-64 flex flex-col gap-4">
-                    <!-- Status Card -->
+    <div class="flex h-screen">
+        <aside id="sidebar" class="fixed top-0 left-0 z-40 w-72 h-screen bg-black/30 backdrop-blur-xl border-r border-gray-700/50 transition-transform -translate-x-full lg:translate-x-0">
+            <div class="flex flex-col h-full p-4">
+                <div class="flex items-center gap-3 mb-8 px-2">
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3.5m0 0V11"></path></svg>
+                    </div>
+                    <h2 class="text-xl font-bold text-white">Hand Detection</h2>
+                </div>
+
+                <div class="flex-grow space-y-6">
                     <div class="glass-card rounded-2xl p-4">
                         <h3 class="text-sm font-medium text-gray-300 mb-3">System Status</h3>
                         <div class="status-pill">
@@ -193,120 +164,87 @@
                         </div>
                     </div>
                     
-                    <!-- Metrics Card -->
-                    <div class="glass-card rounded-2xl p-4 flex-grow">
-                        <h3 class="text-sm font-medium text-gray-300 mb-3">Metrics</h3>
-                        
-                        <div class="space-y-3">
-                            <!-- Hands Detected -->
-                            <div class="metric-card p-3">
-                                <p class="text-xs text-gray-400 mb-1">Hands Detected</p>
-                                <p class="text-xl metric-value text-white" id="num-hands">0</p>
-                            </div>
-
-                            <!-- Fingers Detected -->
-                            <div class="metric-card p-3">
-                                <p class="text-xs text-gray-400 mb-1">Fingers Detected</p>
-                                <p class="text-xl metric-value text-white" id="fingers-count">0</p>
-                            </div>
-                            
-                            <!-- FPS -->
-                            <div class="metric-card p-3">
-                                <p class="text-xs text-gray-400 mb-1">FPS</p>
-                                <p class="text-xl metric-value text-white" id="fps-value">0</p>
-                            </div>
-                            
-                            <!-- Session Time -->
-                            <div class="metric-card p-3">
-                                <p class="text-xs text-gray-400 mb-1">Session Time</p>
-                                <p class="text-xl metric-value text-white" id="session-time">00:00</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Center Column - Camera Feed -->
-                <div class="flex-grow">
-                    <!-- Camera Card -->
-                    <div class="glass-card rounded-3xl overflow-hidden">
-                        <div class="flex items-center justify-between px-4 py-2">
-                            <h2 class="text-sm font-medium text-gray-300">Server Camera Feed</h2>
-                            <span id="camera-status" class="text-xs text-gray-400">Server Camera Ready</span>
-                        </div>
-                        <div class="camera-card">
-                            <img id="processed-feed" 
-                                width="640" height="480"
-                                style="width: 100%; height: auto; max-width: 640px; display: block; margin: 0 auto;"
-                                src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQwIiBoZWlnaHQ9IjQ4MCIgdmlld0JveD0iMCAwIDY0MCA0ODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjY0MCIgaGVpZ2h0PSI0ODAiIGZpbGw9IiMwYzBjMGMiLz4KICA8cGF0aCBkPSJNMzIwIDIwMEM0MTcuMyAyMDAgNDk2IDIyNi45IDQ5NiAyNjBDNDk2IDI5My4xIDQxNy4zIDMyMCAzMjAgMzIwQzIyMi43IDMyMCAxNDQgMjkzLjEgMTQ0IDI2MEMxNDQgMjI2LjkgMjIyLjcgMjAwIDMyMCAyMDAiIHN0cm9rZT0iIzMzMzMzMyIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CiAgPHBhdGggZD0iTTMyMCAxNjBDMzY0LjIgMTYwIDQwMCAxOTUuOCA0MDAgMjQwQzQwMCAyODQuMiAzNjQuMiAzMjAgMzIwIDMyMEMyNzUuOCAzMjAgMjQwIDI4NC4yIDI0MCAyNDBDMjQwIDE5NS44IDI3NS44IDE2MCAzMjAgMTYwIiBzdHJva2U9IiM0NDQ0NDQiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgogIDxjaXJjbGUgY3g9IjMyMCIgY3k9IjI0MCIgcj0iNDAiIHN0cm9rZT0iIzU1NTU1NSIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CiAgPGNpcmNsZSBjeD0iMzIwIiBjeT0iMjQwIiByPSI4IiBmaWxsPSIjNjY2NjY2Ii8+CiAgPHRleHQgeD0iMzIwIiB5PSIzMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNhYWFhYWEiIGZvbnQtZmFtaWx5PSJJbnRlciIgZm9udC1zaXplPSIxNCI+Q2FtZXJhIHJlYWR5PC90ZXh0PgogIDx0ZXh0IHg9IjMyMCIgeT0iMzI1IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2NjY2IiBmb250LWZhbWlseT0iSW50ZXIiIGZvbnQtc2l6ZT0iMTIiPkNsaWNrIFN0YXJ0IHRvIGJlZ2luIGhhbmQgZGV0ZWN0aW9uPC90ZXh0PgogIDxwYXRoIGQ9Ik0yNjAgMjQwSDM4MCIgc3Ryb2tlPSIjMzMzMzMzIiBzdHJva2Utd2lkdGg9IjEiLz4KICA8cGF0aCBkPSJNMzIwIDE4MEwzMjAgMzAwIiBzdHJva2U9IiMzMzMzMzMiIHN0cm9rZS13aWR0aD0iMSIvPgo8L3N2Zz4K" 
-                                alt="Hand detection">
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Right Column - Button Status -->
-                <div class="w-full lg:w-64 flex flex-col gap-4">
-                    <!-- Button Status Card -->
                     <div class="glass-card rounded-2xl p-4">
-                        <h3 class="text-sm font-medium text-gray-300 mb-3">Button Status</h3>
-                        <div class="space-y-4">
-                            <!-- Green Button -->
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-400">Green Button</span>
-                                <div class="w-3 h-3 rounded-full bg-green-500 opacity-30 button-indicator" id="green-indicator"></div>
-                            </div>
-                            
-                            <!-- Red Button -->
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm text-gray-400">Red Button</span>
-                                <div class="w-3 h-3 rounded-full bg-red-500 opacity-30 button-indicator" id="red-indicator"></div>
-                            </div>
+                        <h3 class="text-sm font-medium text-gray-300 mb-3">Metrics</h3>
+                        <div class="space-y-3">
+                            <div class="metric-card p-3"><p class="text-xs text-gray-400 mb-1">Hands Detected</p><p class="text-xl font-semibold text-white" id="num-hands">0</p></div>
+                            <div class="metric-card p-3"><p class="text-xs text-gray-400 mb-1">Fingers Detected</p><p class="text-xl font-semibold text-white" id="fingers-count">0</p></div>
+                            <div class="metric-card p-3"><p class="text-xs text-gray-400 mb-1">FPS</p><p class="text-xl font-semibold text-white" id="fps-value">0</p></div>
+                            <div class="metric-card p-3"><p class="text-xs text-gray-400 mb-1">Session Time</p><p class="text-xl font-semibold text-white" id="session-time">00:00</p></div>
                         </div>
                     </div>
-                    
-                    <!-- Controls Card -->
-                    <div class="glass-card rounded-2xl p-4 flex-grow">
+
+                    <div class="glass-card rounded-2xl p-4">
                         <h3 class="text-sm font-medium text-gray-300 mb-3">Controls</h3>
-                        
                         <div class="space-y-3">
-                            <button id="start-btn" class="elegant-button w-full px-4 py-3 text-white text-sm rounded-xl flex items-center justify-center gap-2">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
-                                </svg>
-                                Start Camera
-                            </button>
-                            
-                            <button id="stop-btn" class="elegant-button stop-button w-full px-4 py-3 text-white text-sm rounded-xl hidden items-center justify-center gap-2">
-                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"></path>
-                                </svg>
-                                Stop Camera
-                            </button>
+                            <button id="start-btn" class="elegant-button w-full px-4 py-3 text-white text-sm rounded-xl flex items-center justify-center gap-2"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path></svg>Start Camera</button>
+                            <button id="stop-btn" class="elegant-button stop-button w-full px-4 py-3 text-white text-sm rounded-xl hidden items-center justify-center gap-2"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"></path></svg>Stop Camera</button>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Professional Footer -->
-            <footer class="mt-12">
-                <div class="glass-card rounded-2xl p-6 w-full">
-                    <div class="flex items-center justify-center gap-3 mb-2">
-                        <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-                            <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"></path>
-                            </svg>
+        </aside>
+
+        <div class="lg:ml-72 flex-1 flex flex-col">
+            <header class="sticky top-0 z-30 lg:hidden">
+                <nav class="flex items-center justify-between p-4 bg-black/30 backdrop-blur-md">
+                    <h1 class="text-lg font-bold text-white">Hand Detection</h1>
+                    <button id="sidebar-toggle" class="p-2 rounded-md hover:bg-gray-700/50">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                </nav>
+            </header>
+
+            <main class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+                <div class="w-full max-w-7xl mx-auto">
+                     <div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+                        <div class="xl:col-span-2">
+                            <div class="glass-card rounded-2xl overflow-hidden">
+                                <div class="p-4 border-b border-white/10">
+                                    <h2 class="text-base font-medium text-gray-200">Server Camera Feed</h2>
+                                    <p id="camera-status" class="text-xs text-gray-400 mt-1">Server Camera Ready</p>
+                                </div>
+                                <div class="bg-black/30 p-4">
+                                    <img id="processed-feed" width="640" height="480" class="w-full h-auto rounded-lg" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQwIiBoZWlnaHQ9IjQ4MCIgdmlld0JveD0iMCAwIDY0MCA0ODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjY0MCIgaGVpZ2h0PSI0ODAiIGZpbGw9IiMwYzBjMGMiLz4KICA8cGF0aCBkPSJNMzIwIDIwMEM0MTcuMyAyMDAgNDk2IDIyNi45IDQ5NiAyNjBDNDk2IDI5My4xIDQxNy4zIDMyMCAzMjAgMzIwQzIyMi43IDMyMCAxNDQgMjkzLjEgMTQ0IDI2MEMxNDQgMjI2LjkgMjIyLjcgMjAwIDMyMCAyMDAiIHN0cm9rZT0iIzMzMzMzMyIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CiAgPHBhdGggZD0iTTMyMCAxNjBDMzY0LjIgMTYwIDQwMCAxOTUuOCA0MDAgMjQwQzQwMCAyODQuMiAzNjQuMiAzMjAgMzIwIDMyMEMyNzUuOCAzMjAgMjQwIDI4NC4yIDI0MCAyNDBDMjQwIDE5NS44IDI3NS44IDE2MCAzMjAgMTYwIiBzdHJva2U9IiM0NDQ0NDQiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgogIDxjaXJjbGUgY3g9IjMyMCIgY3k9IjI0MCIgcj0iNDAiIHN0cm9rZT0iIzU1NTU1NSIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CiAgPGNpcmNsZSBjeD0iMzIwIiBjeT0iMjQwIiByPSI4IiBmaWxsPSIjNjY2NjY2Ii8+CiAgPHRleHQgeD0iMzIwIiB5PSIzMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNhYWFhYWEiIGZvbnQtZmFtaWx5PSJJbnRlciIgZm9udC1zaXplPSIxNCI+Q2FtZXJhIHJlYWR5PC90ZXh0PgogIDx0ZXh0IHg9IjMyMCIgeT0iMzI1IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2NjY2IiBmb250LWZhbWlseT0iSW50ZXIiIGZvbnQtc2l6ZT0iMTIiPkNsaWNrIFN0YXJ0IHRvIGJlZ2luIGhhbmQgZGV0ZWN0aW9uPC90ZXh0PgogIDxwYXRoIGQ9Ik0yNjAgMjQwSDM4MCIgc3Ryb2tlPSIjMzMzMzMzIiBzdHJva2Utd2lkdGg9IjEiLz4KICA8cGF0aCBkPSJNMzIwIDE4MEwzMjAgMzAwIiBzdHJva2U9IiMzMzMzMzMiIHN0cm9rZS13aWR0aD0iMSIvPgo8L3N2Zz4K" alt="Hand detection">
+                                </div>
+                            </div>
                         </div>
-                        <div class="text-left">
-                            <h4 class="text-sm font-semibold text-white">AI Powered by PAMS</h4>
-                            <p class="text-xs text-gray-400">Professional AI & Machine Learning Solutions</p>
+
+                        <div>
+                            <div class="glass-card rounded-2xl p-4 h-full">
+                                <h3 class="text-base font-medium text-gray-200 mb-4">Button Interaction Status</h3>
+                                <div class="space-y-4">
+                                    <div class="flex items-center justify-between p-3 rounded-lg bg-black/20">
+                                        <span class="text-sm text-gray-300">Green Button</span>
+                                        <div class="w-4 h-4 rounded-full bg-green-500 opacity-30 button-indicator" id="green-indicator"></div>
+                                    </div>
+                                    <div class="flex items-center justify-between p-3 rounded-lg bg-black/20">
+                                        <span class="text-sm text-gray-300">Red Button</span>
+                                        <div class="w-4 h-4 rounded-full bg-red-500 opacity-30 button-indicator" id="red-indicator"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="border-t border-gray-700 pt-3 mt-3 text-center">
-                        <p class="text-xs text-gray-500">
-                            © 2025 PAMS. Advanced Computer Vision & Gesture Recognition System
-                        </p>
-                    </div>
+
+                    <footer class="mt-8">
+                        <div class="glass-card rounded-2xl p-4 w-full">
+                            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                                        <svg class="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                                    </div>
+                                    <div>
+                                        <h4 class="text-sm font-semibold text-white">AI Powered by PAMS</h4>
+                                        <p class="text-xs text-gray-400">Advanced Computer Vision & Gesture Recognition</p>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-500 text-center sm:text-right">© 2025 PAMS Professional AI & Machine Learning Solutions</p>
+                            </div>
+                        </div>
+                    </footer>
                 </div>
-            </footer>
+            </main>
         </div>
     </div>
 
@@ -429,34 +367,30 @@
             switch(status) {
                 case 'ready':
                     statusElement.textContent = 'Ready';
-                    statusElement.className = 'text-gray-400 text-sm';
                     dotElement.className = 'w-2 h-2 rounded-full status-inactive status-dot';
                     cameraStatusElement.textContent = 'Server Camera Ready';
-                    cameraStatusElement.className = 'text-xs text-gray-400';
+                    cameraStatusElement.className = 'text-xs text-gray-400 mt-1';
                     break;
                     
                 case 'active':
                     statusElement.textContent = 'Active';
-                    statusElement.className = 'text-emerald-400 text-sm';
                     dotElement.className = 'w-2 h-2 rounded-full status-active status-dot';
                     cameraStatusElement.textContent = 'Streaming Active';
-                    cameraStatusElement.className = 'text-xs text-emerald-400';
+                    cameraStatusElement.className = 'text-xs text-emerald-400 mt-1';
                     break;
                     
                 case 'starting':
                     statusElement.textContent = 'Starting...';
-                    statusElement.className = 'text-yellow-400 text-sm';
                     dotElement.className = 'w-2 h-2 rounded-full status-inactive status-dot';
                     cameraStatusElement.textContent = 'Starting Stream...';
-                    cameraStatusElement.className = 'text-xs text-yellow-400';
+                    cameraStatusElement.className = 'text-xs text-yellow-400 mt-1';
                     break;
                     
                 case 'error':
                     statusElement.textContent = 'Error';
-                    statusElement.className = 'text-red-400 text-sm';
                     dotElement.className = 'w-2 h-2 rounded-full status-error status-dot';
                     cameraStatusElement.textContent = 'Camera Error';
-                    cameraStatusElement.className = 'text-xs text-red-400';
+                    cameraStatusElement.className = 'text-xs text-red-400 mt-1';
                     break;
             }
         }
@@ -489,22 +423,15 @@
         }
         
         function updateDetectionData(data) {
-            // Update number of hands detected
             document.getElementById('num-hands').textContent = data.num_hands || 0;
-            
-            // Update finger count
             document.getElementById('fingers-count').textContent = data.fingers_count || 0;
-            
-            // Update button indicators
             updateButtonIndicators(data.touched_button);
         }
         
         function updateButtonIndicators(touchedButton) {
-            // Reset both indicators
             greenIndicator.classList.remove('active');
             redIndicator.classList.remove('active');
             
-            // Activate the touched one
             if (touchedButton === 'green') {
                 greenIndicator.classList.add('active');
             } else if (touchedButton === 'red') {
@@ -512,5 +439,19 @@
             }
         }
     </script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sidebar = document.getElementById('sidebar');
+            const sidebarToggle = document.getElementById('sidebar-toggle');
+            
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('-translate-x-full');
+                });
+            }
+        });
+    </script>
+
 </body>
 </html>
