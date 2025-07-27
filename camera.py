@@ -22,7 +22,6 @@ class Camera:
 
     def get_frame(self):
         ret, frame = self.cap.read()
-        cv.imshow("Camera Feed", frame)
         if not ret or frame is None:
             print("⚠️  Failed to read frame")
             return None

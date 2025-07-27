@@ -33,14 +33,32 @@ imageProcessing = ImageProcessing(handDetector)
 streaming = False
 stream_thread = None
 
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@socketio.on('start_stream')
+def handle_start_stream():
+    global streaming, stream_thread
+    
+    if not streaming:
+        streaming = True
+        stream_thread = threading.Thread(target=camera_stream)
+        stream_thread.daemon = True
+        stream_thread.start()
+        print("Started camera stream thread")
+    
+    return {"status": "started"}
+
 def camera_stream():
     global streaming
     
-    print("Starting camera stream thread")
+    print("Camera stream thread running")
     frame_count = 0
     
     while streaming:
-        if camera is not None:
+        if camera is not None and camera.is_opened():
             try:
                 frame = camera.get_frame()
                 
@@ -54,73 +72,36 @@ def camera_stream():
                 
                 # Encode the processed frame to JPEG
                 ret, buffer = cv2.imencode('.jpg', processed_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                
                 if ret:
                     # Convert to base64 for sending via socketio
                     image_base64 = base64.b64encode(buffer).decode('utf-8')
-                    
+                        
                     # Log frame transmission every 30 frames (roughly every 2 seconds at 15fps)
                     frame_count += 1
                     if frame_count % 30 == 0:
                         print(f"Successfully transmitted frame #{frame_count} to web client")
-                    
+                        
                     socketio.emit('server_frame', {
                         "image": f'data:image/jpeg;base64,{image_base64}',
                         "detection_data": detection_data
                     })
                 else:
                     print("Error: Failed to encode frame to JPEG")
-                    
+                        
             except Exception as e:
                 print(f"Error in camera stream: {e}")
                 import traceback
                 traceback.print_exc()
         else:
-            print("Warning: Camera is None in stream thread")
-            break
-        
+            print("Warning: Camera is None or not opened in stream thread")
+            # Try to reinitialize camera
+            if camera is not None:
+                camera.openCamera()
+            time.sleep(1)  # Wait before retrying
+            
         # Control the frame rate to avoid overwhelming the server
-        time.sleep(1/15)  # Target 15 FPS
-
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-@socketio.on('start_stream')
-def handle_start_stream():
-    global streaming, stream_thread
-    
-    print(f"🚀 Received start_stream request")
-    print(f"   Current streaming status: {streaming}")
-    print(f"   Camera available: {camera is not None}")
-    print(f"   Camera opened: {camera.is_opened() if camera else 'N/A'}")
-    
-    if not streaming:
-        if camera is None:
-            print("❌ Cannot start stream: Camera not initialized")
-            return {"status": "error", "message": "Camera not available"}
-        
-        if not camera.is_opened():
-            print("⚠️  Camera not opened, attempting to open...")
-            try:
-                success = camera.init_camera()
-                if success:
-                    print("✅ Camera opened successfully")
-                else:
-                    print("❌ Failed to open camera")
-                    return {"status": "error", "message": "Failed to open camera"}
-            except Exception as e:
-                print(f"❌ Failed to open camera: {e}")
-                return {"status": "error", "message": f"Failed to open camera: {e}"}
-        
-        streaming = True
-        stream_thread = threading.Thread(target=camera_stream)
-        stream_thread.daemon = True
-        stream_thread.start()
-        print("✅ Camera streaming started successfully")
-        return {"status": "started"}
-    else:
-        print("⚠️  Stream already running")
-        return {"status": "already_running"}
+        time.sleep(1/15)  # Target 15 FPS           
 
 @socketio.on('stop_stream')
 def handle_stop_stream():
@@ -155,7 +136,8 @@ def handle_disconnect():
 if __name__ == '__main__':
     try:
         print("Starting server at http://0.0.0.0:5050")
-        socketio.run(app, host='0.0.0.0', port=5050, debug=True, allow_unsafe_werkzeug=True)
+        # Disable debug mode to prevent camera access issues on restart
+        socketio.run(app, host='0.0.0.0', port=5050, debug=False, allow_unsafe_werkzeug=True)
     finally:
         streaming = False
         if camera is not None:
