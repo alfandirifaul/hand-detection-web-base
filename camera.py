@@ -1,5 +1,4 @@
 import cv2 as cv
-import os
 import numpy as np
 import time
 
@@ -10,81 +9,81 @@ class Camera:
         self.init_camera()
 
     def init_camera(self):
+        """Initialize camera with proper error handling"""
         print("🎥 Opening camera...")
         
-        # Try multiple approaches to open the camera
-        backends_to_try = [
-            (cv.CAP_GSTREAMER, "GStreamer"),
-            (cv.CAP_FFMPEG, "FFmpeg"), 
-            (cv.CAP_ANY, "CAP_ANY"),
-            (cv.CAP_V4L2, "V4L2"),
+        # Try different backends in order of preference
+        backends = [
+            cv.CAP_V4L2,    # Linux default
+            cv.CAP_GSTREAMER,  # Alternative for Linux
+            cv.CAP_ANY      # Let OpenCV choose
         ]
         
-        for backend, name in backends_to_try:
+        for backend in backends:
             try:
-                print(f"🔍 Trying {name} backend...")
+                print(f"   Trying backend: {backend}")
                 self.cap = cv.VideoCapture(self.camera_index, backend)
                 
                 if not self.cap.isOpened():
-                    print(f"❌ {name} backend failed to open camera")
+                    print(f"   ❌ Failed to open with backend {backend}")
                     continue
                 
-                # Set some basic properties that might help
+                # Set buffer size to reduce latency
                 self.cap.set(cv.CAP_PROP_BUFFERSIZE, 1)
+                
+                # Set reasonable resolution
                 self.cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
                 self.cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
                 
-                # Give camera time to initialize
-                print(f"⏳ Waiting for {name} to stabilize...")
-                time.sleep(2.0)
+                # Set FPS
+                self.cap.set(cv.CAP_PROP_FPS, 30)
                 
-                # Test frame reading with multiple attempts
-                for attempt in range(3):
-                    ret, frame = self.cap.read()
-                    if ret and frame is not None:
-                        print(f"✅ Camera opened successfully with {name} backend")
-                        print(f"   📊 Frame size: {frame.shape[1]}x{frame.shape[0]}")
-                        return  # Success!
-                    else:
-                        print(f"⚠️  Frame read attempt {attempt + 1} failed, retrying...")
-                        time.sleep(1.0)
+                # Give camera time to warm up
+                time.sleep(1)
                 
-                # If we get here, this backend didn't work
-                print(f"❌ {name} backend opened camera but couldn't read frames")
-                self.cap.release()
-                
+                # Test if we can read a frame
+                ret, frame = self.cap.read()
+                if ret and frame is not None:
+                    print(f"   ✅ Camera opened successfully with backend {backend}")
+                    print(f"   📐 Resolution: {int(self.cap.get(cv.CAP_PROP_FRAME_WIDTH))}x{int(self.cap.get(cv.CAP_PROP_FRAME_HEIGHT))}")
+                    print(f"   🎬 FPS: {self.cap.get(cv.CAP_PROP_FPS)}")
+                    return  # Success!
+                else:
+                    print(f"   ❌ Cannot read frames with backend {backend}")
+                    self.cap.release()
+                    self.cap = None
+                    
             except Exception as e:
-                print(f"❌ {name} backend error: {e}")
+                print(f"   ❌ Exception with backend {backend}: {e}")
                 if self.cap:
                     self.cap.release()
-                continue
+                    self.cap = None
         
-        # If all backends failed
-        self.cap = None
-        raise Exception("All camera backends failed")
-
-    def openCamera(self):
-        """Reopen camera if it was closed"""
-        if self.cap is None or not self.cap.isOpened():
-            print(f"🔄 Reopening camera...")
-            self.init_camera()
+        # If we get here, all backends failed
+        raise Exception("Could not initialize camera with any backend")
 
     def get_frame(self):
         """Get a frame from the camera"""
         if self.cap is None or not self.cap.isOpened():
             print("⚠️  Camera not opened")
-            return np.zeros((480, 640, 3), dtype=np.uint8)
+            return None
             
         ret, frame = self.cap.read()
         if not ret or frame is None:
             print("⚠️  Failed to read frame")
-            return np.zeros((480, 640, 3), dtype=np.uint8)
+            return None
 
         return frame
 
     def is_opened(self):
         """Check if the camera is opened"""
         return self.cap is not None and self.cap.isOpened()
+
+    def openCamera(self):
+        """Reopen camera if it was closed"""
+        if self.cap is None or not self.cap.isOpened():
+            print("🔄 Reopening camera...")
+            self.init_camera()
 
     def release(self):
         """Release camera resources"""
@@ -95,4 +94,8 @@ class Camera:
         
     def stop(self):
         """Alias for release"""
+        self.release()
+
+    def __del__(self):
+        """Cleanup when object is destroyed"""
         self.release()
