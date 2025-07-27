@@ -11,6 +11,8 @@ class Camera:
     def init_camera(self):
         """Initialize camera with proper error handling"""
         print("🎥 Opening camera...")
+
+        self.cap = cv.VideoCapture(self.camera_index)
         
         ret, frame = self.cap.read()
 
