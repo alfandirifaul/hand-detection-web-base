@@ -11,11 +11,6 @@ class Camera:
     def init_camera(self):
         """Initialize camera with proper error handling"""
         print("🎥 Opening camera...")
-
-        if not self.cap.isOpened():
-            print("   Camera not opened, attempting to initialize...")
-            self.init_camera()
-            return
         
         ret, frame = self.cap.read()
 
