@@ -102,8 +102,12 @@ def handle_start_stream():
         if not camera.is_opened():
             print("⚠️  Camera not opened, attempting to open...")
             try:
-                camera.openCamera()
-                print("✅ Camera opened successfully")
+                success = camera.openCamera()
+                if success:
+                    print("✅ Camera opened successfully")
+                else:
+                    print("❌ Failed to open camera")
+                    return {"status": "error", "message": "Failed to open camera"}
             except Exception as e:
                 print(f"❌ Failed to open camera: {e}")
                 return {"status": "error", "message": f"Failed to open camera: {e}"}

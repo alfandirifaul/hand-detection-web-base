@@ -11,24 +11,58 @@ class Camera:
     def init_camera(self):
         """Initialize camera with proper error handling"""
         print("🎥 Opening camera...")
-
-        self.cap = cv.VideoCapture(self.camera_index)
-        print(self.cap)
         
-        ret, frame = self.cap.read()
-
-        if ret and frame is not None:
-            print(f"   📐 Resolution: {int(self.cap.get(cv.CAP_PROP_FRAME_WIDTH))}x{int(self.cap.get(cv.CAP_PROP_FRAME_HEIGHT))}")
-            print(f"   🎬 FPS: {self.cap.get(cv.CAP_PROP_FPS)}")
-            return
-        else:
-            print("   ❌ Failed to read frame from camera")
-            if self.cap:
-                self.cap.release()
-                self.cap = None
+        # Try multiple camera indices and backends
+        camera_indices = [0, 1, 2]
+        backends = [cv.CAP_V4L2, cv.CAP_GSTREAMER, cv.CAP_ANY]
+        
+        for index in camera_indices:
+            for backend in backends:
+                print(f"   🔍 Trying camera index {index} with backend {backend}...")
+                
+                try:
+                    self.cap = cv.VideoCapture(index, backend)
+                    
+                    if not self.cap.isOpened():
+                        if self.cap:
+                            self.cap.release()
+                            self.cap = None
+                        continue
+                    
+                    # Test if we can actually read a frame
+                    ret, frame = self.cap.read()
+                    
+                    if ret and frame is not None:
+                        print(f"   ✅ Camera opened successfully on index {index}")
+                        print(f"   📐 Resolution: {int(self.cap.get(cv.CAP_PROP_FRAME_WIDTH))}x{int(self.cap.get(cv.CAP_PROP_FRAME_HEIGHT))}")
+                        print(f"   🎬 FPS: {self.cap.get(cv.CAP_PROP_FPS)}")
+                        self.camera_index = index
+                        return True
+                    else:
+                        print(f"   ❌ Camera index {index} opened but failed to read frame")
+                        if self.cap:
+                            self.cap.release()
+                            self.cap = None
+                            
+                except Exception as e:
+                    print(f"   ❌ Exception with camera {index}: {e}")
+                    if self.cap:
+                        self.cap.release()
+                        self.cap = None
+        
+        print("   ❌ Failed to initialize any camera")
+        self.cap = None
+        return False
 
     def get_frame(self):        
-        print(self.cap)
+        if self.cap is None:
+            print("⚠️  Camera not initialized")
+            return None
+            
+        if not self.cap.isOpened():
+            print("⚠️  Camera not opened")
+            return None
+            
         ret, frame = self.cap.read()
         if not ret or frame is None:
             print("⚠️  Failed to read frame")
@@ -44,7 +78,9 @@ class Camera:
         """Reopen camera if it was closed"""
         if self.cap is None or not self.cap.isOpened():
             print("🔄 Reopening camera...")
-            self.init_camera()
+            success = self.init_camera()
+            return success
+        return True
 
     def release(self):
         """Release camera resources"""
