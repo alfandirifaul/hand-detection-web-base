@@ -63,21 +63,20 @@ def camera_stream():
                 frame = camera.get_frame()
                 
                 if frame is None:
-                    print("Warning: get_frame() returned None")
-                    time.sleep(0.1)
+                    time.sleep(0.01)  # Short sleep if no frame
                     continue
                 
                 # Process the frame with hand detection
                 processed_frame, detection_data = handDetector.process_frame(frame)
                 
-                # Encode the processed frame to JPEG
-                ret, buffer = cv2.imencode('.jpg', processed_frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+                # Use lower quality JPEG for faster encoding
+                ret, buffer = cv2.imencode('.jpg', processed_frame, [cv2.IMWRITE_JPEG_QUALITY, 50])
                 
                 if ret:
                     # Convert to base64 for sending via socketio
                     image_base64 = base64.b64encode(buffer).decode('utf-8')
                         
-                    # Log frame transmission every 30 frames (roughly every 2 seconds at 15fps)
+                    # Log frame transmission every 30 frames
                     frame_count += 1
                     if frame_count % 30 == 0:
                         print(f"Successfully transmitted frame #{frame_count} to web client")
@@ -95,13 +94,12 @@ def camera_stream():
                 traceback.print_exc()
         else:
             print("Warning: Camera is None or not opened in stream thread")
-            # Try to reinitialize camera
             if camera is not None:
                 camera.openCamera()
-            time.sleep(1)  # Wait before retrying
+            time.sleep(1)
             
-        # Control the frame rate to avoid overwhelming the server
-        time.sleep(1/15)  # Target 15 FPS           
+        # Faster frame rate for real-time feel
+        time.sleep(1/30)  # Target 30 FPS           
 
 @socketio.on('stop_stream')
 def handle_stop_stream():
