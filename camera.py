@@ -26,12 +26,7 @@ class Camera:
                 self.cap.release()
                 self.cap = None
 
-    def get_frame(self):
-        """Get a frame from the camera"""
-        if self.cap is None:
-            print("⚠️  Camera not opened")
-            return None
-            
+    def get_frame(self):        
         ret, frame = self.cap.read()
         if not ret or frame is None:
             print("⚠️  Failed to read frame")
