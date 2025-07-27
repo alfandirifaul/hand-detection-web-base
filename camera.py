@@ -13,6 +13,7 @@ class Camera:
         print("🎥 Opening camera...")
 
         self.cap = cv.VideoCapture(self.camera_index)
+        print(self.cap)
         
         ret, frame = self.cap.read()
 
@@ -27,6 +28,7 @@ class Camera:
                 self.cap = None
 
     def get_frame(self):        
+        print(self.cap)
         ret, frame = self.cap.read()
         if not ret or frame is None:
             print("⚠️  Failed to read frame")
