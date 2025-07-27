@@ -9,7 +9,7 @@ class Camera:
         self.init_camera()
 
     def init_camera(self):
-        """Initialize camera with proper error handling"""
+        """Initialize camera with proper error handling and RPi optimizations"""
         print("🎥 Opening camera...")
         
         self.cap = cv.VideoCapture(self.camera_index)
@@ -17,11 +17,25 @@ class Camera:
             print("❌ Failed to open camera")
             return False
 
+        # Optimize for Raspberry Pi performance
+        self.cap.set(cv.CAP_PROP_FRAME_WIDTH, 640)
+        self.cap.set(cv.CAP_PROP_FRAME_HEIGHT, 480)
+        self.cap.set(cv.CAP_PROP_FPS, 10)  # Lower FPS for stable performance
+        self.cap.set(cv.CAP_PROP_BUFFERSIZE, 1)  # Reduce buffer to minimize delay
+        
+        # Try to use hardware acceleration
+        self.cap.set(cv.CAP_PROP_FOURCC, cv.VideoWriter_fourcc('M', 'J', 'P', 'G'))
+
         print("✅ Camera opened successfully")
         return True
 
     def get_frame(self):
-        ret, frame = self.cap.read()
+        # Clear buffer to get latest frame (reduces delay)
+        for _ in range(2):
+            ret, frame = self.cap.read()
+            if not ret:
+                break
+                
         if not ret or frame is None:
             print("⚠️  Failed to read frame")
             return None
