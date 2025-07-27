@@ -28,7 +28,7 @@ class Camera:
 
     def get_frame(self):
         """Get a frame from the camera"""
-        if self.cap is None or not self.cap.isOpened():
+        if self.cap is None:
             print("⚠️  Camera not opened")
             return None
             
