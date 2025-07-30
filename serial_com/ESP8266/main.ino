@@ -18,6 +18,10 @@ unsigned long previousBlinkMillis = 0;
 const long blinkInterval = 500; // Blink speed in milliseconds
 int ledPinState = HIGH; // HIGH is off for the built-in LED
 
+// --- Buzzer Pin ---
+const int buzzerPin = 14; // D5 on NodeMCU/ESP8266
+int buzzerState = LOW; // LOW is off for active buzzer
+
 // --- Debounce/Cooldown Timer for Serial Commands ---
 unsigned long lastProcessTime = 0;
 const long commandCooldown = 1500; // Ignore new commands for 1.5 seconds after one is processed
@@ -93,6 +97,8 @@ void setup() {
   Serial.begin(115200);
   pinMode(LED_BUILTIN, OUTPUT);
   digitalWrite(LED_BUILTIN, HIGH); // Start with LED off
+  pinMode(buzzerPin, OUTPUT);
+  digitalWrite(buzzerPin, LOW); // Start with buzzer off
 
   // --- WiFi Connection ---
   Serial.println();
@@ -164,17 +170,21 @@ void loop() {
     }
   }
 
-  // 2. Update the physical LED based on the current state
+  // 2. Update the physical LED and buzzer based on the current state
   if (lampState.equals("blinking")) {
     unsigned long currentMillis = millis();
     if (currentMillis - previousBlinkMillis >= blinkInterval) {
       previousBlinkMillis = currentMillis;
-      // Invert the LED state
+      // Invert the LED and buzzer state
       ledPinState = (ledPinState == LOW) ? HIGH : LOW;
+      buzzerState = (buzzerState == LOW) ? HIGH : LOW;
       digitalWrite(LED_BUILTIN, ledPinState);
+      digitalWrite(buzzerPin, buzzerState);
     }
   } else if (lampState.equals("off")) {
-    // Keep the LED off (HIGH is off for the built-in LED)
+    // Keep the LED and buzzer off (HIGH is off for the built-in LED, LOW is off for buzzer)
     digitalWrite(LED_BUILTIN, HIGH);
+    digitalWrite(buzzerPin, LOW);
+    buzzerState = LOW;
   }
 }
