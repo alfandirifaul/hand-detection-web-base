@@ -56,11 +56,11 @@
         "wires": [
             [
                 "4876c41ab538860a",
-                "f2df0a36a24f157e"
+                "3a6075416d7b828d"
             ],
             [
                 "980ff94459af1702",
-                "ba4ab6da8071c146"
+                "f914e3b10e9fbab3"
             ]
         ]
     },
@@ -151,12 +151,11 @@
         "from": "",
         "to": "",
         "reg": false,
-        "x": 1000,
-        "y": 320,
+        "x": 720,
+        "y": 340,
         "wires": [
             [
-                "1b11828928bd1d43",
-                "9962a3494beb1165"
+                "ba4ab6da8071c146"
             ]
         ]
     },
@@ -179,12 +178,11 @@
         "from": "",
         "to": "",
         "reg": false,
-        "x": 1000,
+        "x": 720,
         "y": 280,
         "wires": [
             [
-                "5ac66657e4846bd7",
-                "9962a3494beb1165"
+                "f2df0a36a24f157e"
             ]
         ]
     },
@@ -207,14 +205,16 @@
         "gap": "",
         "start": "",
         "inout": "out",
-        "septopics": false,
+        "septopics": true,
         "property": "payload",
         "topi": "topic",
-        "x": 790,
-        "y": 280,
+        "x": 970,
+        "y": 260,
         "wires": [
             [
-                "3a6075416d7b828d"
+                "9962a3494beb1165",
+                "5ac66657e4846bd7",
+                "1a83f61d34b24c21"
             ]
         ]
     },
@@ -238,35 +238,10 @@
         "to": "",
         "reg": false,
         "x": 1000,
-        "y": 200,
+        "y": 140,
         "wires": [
             [
                 "f2df0a36a24f157e"
-            ]
-        ]
-    },
-    {
-        "id": "50b687a0cb3d3b79",
-        "type": "inject",
-        "z": "hand-detection-flow",
-        "name": "",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "3",
-        "crontab": "",
-        "once": true,
-        "onceDelay": 0.1,
-        "topic": "",
-        "payload": "",
-        "payloadType": "date",
-        "x": 630,
-        "y": 120,
-        "wires": [
-            [
-                "b9a069cdec4488c9"
             ]
         ]
     },
@@ -279,44 +254,71 @@
         "gap": "",
         "start": "",
         "inout": "out",
-        "septopics": false,
+        "septopics": true,
         "property": "payload",
         "topi": "topic",
-        "x": 790,
-        "y": 320,
+        "x": 970,
+        "y": 340,
         "wires": [
             [
-                "f914e3b10e9fbab3"
+                "9962a3494beb1165",
+                "1b11828928bd1d43",
+                "3d8eafaeae63f08b"
             ]
         ]
     },
     {
-        "id": "e32cfbace954997b",
-        "type": "inject",
+        "id": "1a83f61d34b24c21",
+        "type": "delay",
         "z": "hand-detection-flow",
         "name": "",
-        "props": [
-            {
-                "p": "payload"
-            }
-        ],
-        "repeat": "3",
-        "crontab": "",
-        "once": true,
-        "onceDelay": 0.1,
-        "topic": "",
-        "payload": "",
-        "payloadType": "date",
-        "x": 610,
-        "y": 480,
+        "pauseType": "delay",
+        "timeout": "2",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 820,
+        "y": 140,
         "wires": [
             [
-                "bf2f4029f6f04adc"
+                "b9a069cdec4488c9"
             ]
         ]
     },
     {
-        "id": "bf2f4029f6f04adc",
+        "id": "3d8eafaeae63f08b",
+        "type": "delay",
+        "z": "hand-detection-flow",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "2",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 820,
+        "y": 440,
+        "wires": [
+            [
+                "5d5b79807e8472a4"
+            ]
+        ]
+    },
+    {
+        "id": "5d5b79807e8472a4",
         "type": "change",
         "z": "hand-detection-flow",
         "name": "",
@@ -334,8 +336,8 @@
         "from": "",
         "to": "",
         "reg": false,
-        "x": 980,
-        "y": 480,
+        "x": 1000,
+        "y": 440,
         "wires": [
             [
                 "ba4ab6da8071c146"
