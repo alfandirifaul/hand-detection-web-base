@@ -1,11 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 
-// --- WiFi Credentials ---
-// Replace with your network's SSID and password
-const char* ssid = "nesyaaa";
-const char* password = "aaaaaaab";
-
 // --- Web Server Setup ---
 ESP8266WebServer server(80);
 String latestMessage = "Waiting for commands..."; // Stores the most recent message to display
@@ -100,19 +95,6 @@ void setup() {
   pinMode(buzzerPin, OUTPUT);
   digitalWrite(buzzerPin, LOW); // Start with buzzer off
 
-  // --- WiFi Connection ---
-  Serial.println();
-  Serial.print("Connecting to ");
-  Serial.println(ssid);
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
-  }
-  Serial.println("\nWiFi connected!");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.localIP()); // Print the IP address to find the device
-
   // --- Start Web Server ---
   server.on("/", handleRoot);   // Route for the main page
   server.on("/data", handleData); // Route to get live data
@@ -134,6 +116,8 @@ void loop() {
     if (Serial.available() > 0) {
       command = Serial.readStringUntil('\n');
       command.trim(); // Remove any whitespace
+      
+      Serial.println(command);
 
       // We only act on valid commands.
       if (command.equals("green") || command.equals("red")) {

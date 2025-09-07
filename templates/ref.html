@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Hand Detection</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Roboto+Mono:wght@400;500&display=swap');
+        
+        :root {
+            --glow-color-1: rgba(59, 130, 246, 0.5);
+            --glow-color-2: rgba(147, 51, 234, 0.5);
+        }
+
+        * {
+            font-family: 'Inter', sans-serif;
+        }
+        
+        body {
+            background-color: #0B1120;
+            color: #E2E8F0;
+            overflow: hidden;
+        }
+
+        .aurora-background {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(135deg, #0f172a 0%, #131b30 100%);
+            animation: aurora-move 20s linear infinite alternate;
+        }
+
+        .aurora-background::before, .aurora-background::after {
+            content: '';
+            position: absolute;
+            width: 60vmax;
+            height: 60vmax;
+            border-radius: 50%;
+            opacity: 0.15;
+            filter: blur(100px);
+            z-index: -1;
+        }
+        
+        .aurora-background::before {
+            background-color: var(--glow-color-1);
+            top: -20%;
+            left: -20%;
+            animation: aurora-pulse-1 15s ease-in-out infinite alternate;
+        }
+
+        .aurora-background::after {
+            background-color: var(--glow-color-2);
+            bottom: -20%;
+            right: -20%;
+            animation: aurora-pulse-2 15s ease-in-out infinite alternate;
+        }
+        
+        @keyframes aurora-move {
+            to { transform: rotate(180deg); }
+        }
+
+        @keyframes aurora-pulse-1 {
+            0% { transform: scale(0.8); }
+            100% { transform: scale(1.2) translate(50px, -50px); }
+        }
+
+        @keyframes aurora-pulse-2 {
+            0% { transform: scale(1.2); }
+            100% { transform: scale(0.8) translate(-50px, 50px); }
+        }
+        
+        .glass-card {
+            background: rgba(15, 23, 42, 0.5); /* Darker, less transparent */
+            backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow: 0 16px 60px rgba(0, 0, 0, 0.3);
+            transition: background 0.3s, border 0.3s;
+        }
+        
+        .elegant-button {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        
+        .elegant-button:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(59, 130, 246, 0.5);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(59, 130, 246, 0.15);
+        }
+        
+        .stop-button:hover {
+            border-color: rgba(239, 68, 68, 0.5);
+            box-shadow: 0 8px 25px rgba(239, 68, 68, 0.15);
+        }
+        
+        .status-pill {
+            background: rgba(0,0,0,0.2);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 9999px;
+            padding: 6px 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        
+        .status-active {
+            background: #10b981;
+            box-shadow: 0 0 8px #10b981, 0 0 16px #10b981;
+        }
+        
+        .status-inactive {
+            background: #6b7280;
+        }
+
+        .status-error {
+            background: #ef4444;
+            box-shadow: 0 0 8px #ef4444;
+        }
+        
+        .camera-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .camera-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
+        }
+
+        .info-panel {
+            font-family: 'Roboto Mono', monospace;
+            background: rgba(0,0,0,0.25);
+            border-top: 1px solid rgba(255, 255, 255, 0.07);
+        }
+        
+        .info-item {
+            flex: 1;
+            text-align: center;
+            padding: 16px 8px;
+        }
+
+        .info-item:not(:last-child) {
+            border-right: 1px solid rgba(255, 255, 255, 0.07);
+        }
+    </style>
+    <script>
+        let socket;
+        let video;
+        let canvas;
+        let processedFeed, gestureOutput, confidenceOutput, latencyOutput;
+        let streaming = false;
+        const FPS = 15;
+        let frameInterval;
+        let lastFrameTime = Date.now();
+        
+        // ✨ A more elegant and informative placeholder
+        const placeholderSVG = "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQwIiBoZWlnaHQ9IjQ4MCIgdmlld0JveD0iMCAwIDY0MCA0ODAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgICA8c3R5bGU+CiAgICAgICAgQGtleWZyYW1lcyBncmlkLWZsb3cgewogICAgICAgICAgICAwJSB7IGJhY2tncm91bmQtcG9zaXRpb246IDAgMCA7IH0KICAgICAgICAgICAgMTAwJSB7IGJhY2tncm91bmQtcG9zaXRpb246IC00MHB4IC00MHB4OyB9CiAgICAgICAgfQogICAgICAgIEBrZXlmcmFtZXMgc3BvdGxpZ2h0IHsKICAgICAgICAgICAgMCUgeyBvcGFjaXR5OiAwLjM7IHRyYW5zZm9ybTogc2NhbGUoMC44KTsgfQogICAgICAgICAgICA1MCUgeyBvcGFjaXR5OiAwLjY7IHRyYW5zZm9ybTogc2NhbGUoMSk7IH0KICAgICAgICAgICAgMTAwJSB7IG9wYWNpdHk6IDAuMzsgdHJhbnNmb3JtOiBzY2FsZSgwLjgpOyB9CiAgICAgICAgfQogICAgPC9zdHlsZT4KICAgIDxyZWN0IHdpZHRoPSI2NDAiIGhlaWdodD0iNDgwIiBmaWxsPSJ1cmwoI3BhZCIvPgogICAgPGRlZnM+CiAgICAgICAgPHJhZGlhbEdyYWRpZW50IGlkPSJzcG90IiBjeD0iNTAlIiBjeT0iNTAlIiByPSI1MCUiIGZ4PSI1MCUiIGZ5PSI1MCUiPgogICAgICAgICAgICA8c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSJyZ2JhKDQ0LCAxMDUsIDIxNywgMC4yKSIgLz4KICAgICAgICAgICAgPHN0b3Agb2Zmc2V0PSIxMDAlIiBzdG9wLWNvbG9yPSJyZ2JhKDQ0LCAxMDUsIDIxNywgMCkiIC8+CiAgICAgICAgPC9yYWRpYWxHcmFkaWVudD4KICAgICAgICA8cGF0dGVybiBpZD0icGFkIiB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHBhdHRlcm5Vbml0cz0idXNlclNwYWNlT25Vc2UiPgogICAgICAgICAgICA8cmVjdCB3aWR0aD0iNjQwIiBoZWlnaHQ9IjQ4MCIgZmlsbD0iIzAwMCIvPgogICAgICAgICAgICA8cGF0aCBkPSJNLCAyMCwgMCBMIDIwLCA0MCIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDIpIiAvPgogICAgICAgICAgICA8cGF0aCBkPSJNLCAwLCAyMCBMIDQwLCAyMCIgc3Ryb2tlPSJyZ2JhKDI1NSwyNTUsMjU1LDAuMDIpIiAvPgogICAgICAgIDwvcGF0dGVybj4KICAgIDwvZGVmcz4KICAgIDxyZWN0IHdpZHRoPSI2NDAiIGhlaWdodD0iNDgwIiBzdHlsZT0iYW5pbWF0aW9uOiBncmlkLWZsb3cgNHMgbGluZWFyIGluZmluaXRlOyIgZmlsbD0idXJsKCNwYWQpIi8+CiAgICA8Y2lyY2xlIGN4PSIzMjAiIGN5PSIyNDAiIHI9IjE1MCIgZmlsbD0idXJsKCNzcG90KSIgc3R5bGU9ImFuaW1hdGlvbjogc3BvdGxpZ2h0IDRzIGVhc2UtaW4tb3V0IGluZmluaXRlOyIvPgogICAgPGcgZmlsbD0iI2U2ZThmMCIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMjk2IDIxMCkgc2NhbGUoMi41KSI+CiAgICAgICAgPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBkPSJNMTAgMy41YTEuNSAxLjUgMCAwIDAtMyAwdjhhMyAzIDAgMCAwIDYgMFY4LjM1YTQuNDggNC40OCAwIDAgMSA1LjM2IDQuNDFhMS41IDEuNSAwIDEgMCAyLjk4LS40OWE3LjQ5IDcuNDkgMCAwIDAtNy4xMi0liIHN0cm9rZT0iIzMzNGE1NSIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIiBvcGFjaXR5PSIwLjMiLz4KICAgICAgICA8cGF0aCBkPSJNNi41IDJhMi41IDIuNSAwIDAgMCA1IDIuNUEyLjUgMi41IDAgMCAwIDYgMiIvPgogICAgPC9nPgogICAgPHRleHQgeD0iMzIwIiB5PSIzMTUiIGZvbnQtZmFtaWx5PSJJbnRlciIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iIzZmN2I4YiIgZm9udC1zaXplPSIxNCIgZm9udC13ZWlnaHQ9IjQwMCI+CiAgICAgICAgQUkgR2VzdHVyZSBSZWNvZ25pdGlvbiBJZGxlCiAgICA8L3RleHQ+Cjwvc3ZnPg==";
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get elements
+            video = document.getElementById('camera-feed');
+            canvas = document.getElementById('canvas');
+            processedFeed = document.getElementById('processed-feed');
+            gestureOutput = document.getElementById('gesture-output');
+            confidenceOutput = document.getElementById('confidence-output');
+            latencyOutput = document.getElementById('latency-output');
+            
+            // Set initial state
+            processedFeed.src = placeholderSVG;
+            resetInfoPanel();
+
+            // Connect to server
+            socket = io();
+            
+            // Handle incoming data from server
+            socket.on('processed_frame', function(response) {
+                // Assuming server sends: { image: "base64...", gesture: "Fist", confidence: 0.98 }
+                processedFeed.src = response.image || response; // Handle both object and raw image data
+                if (streaming) {
+                    document.querySelector('.camera-container').classList.add('camera-active');
+                    updateInfoPanel(response);
+                }
+            });
+            
+            document.getElementById('start-camera').addEventListener('click', startCamera);
+            document.getElementById('stop-camera').addEventListener('click', stopCamera);
+        });
+
+        function startCamera() {
+            if (streaming) return;
+            
+            navigator.mediaDevices.getUserMedia({ 
+                video: { width: 640, height: 480, facingMode: 'user' }
+            })
+            .then(stream => {
+                video.srcObject = stream;
+                video.play();
+                streaming = true;
+                
+                canvas.width = 640;
+                canvas.height = 480;
+                
+                lastFrameTime = Date.now();
+                frameInterval = setInterval(captureFrame, 1000 / FPS);
+                
+                updateStatus(true);
+                toggleButtons();
+            })
+            .catch(err => {
+                console.error("Camera error: " + err);
+                updateStatus(false, 'Camera access denied');
+            });
+        }
+
+        function stopCamera() {
+            if (!streaming) return;
+            
+            clearInterval(frameInterval);
+            
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+            
+            video.srcObject = null;
+            streaming = false;
+            
+            processedFeed.src = placeholderSVG;
+            resetInfoPanel();
+            updateStatus(false);
+            toggleButtons();
+            document.querySelector('.camera-container').classList.remove('camera-active');
+        }
+        
+        function captureFrame() {
+            if (!streaming) return;
+            
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            const imageData = canvas.toDataURL('image/jpeg', 0.8);
+            socket.emit('frame', imageData);
+            lastFrameTime = Date.now();
+        }
+
+        function updateInfoPanel(data) {
+            gestureOutput.textContent = data.gesture || 'N/A';
+            
+            if (data.confidence) {
+                confidenceOutput.textContent = (data.confidence * 100).toFixed(1) + '%';
+            } else {
+                confidenceOutput.textContent = '—';
+            }
+
+            const latency = Date.now() - lastFrameTime;
+            latencyOutput.textContent = latency + 'ms';
+        }
+        
+        function resetInfoPanel() {
+            gestureOutput.textContent = '—';
+            confidenceOutput.textContent = '—';
+            latencyOutput.textContent = '—';
+        }
+        
+        function updateStatus(active, errorMsg = '') {
+            const statusDot = document.getElementById('status-dot');
+            const statusText = document.getElementById('status-text');
+            
+            if (active) {
+                statusDot.className = 'status-dot status-active';
+                statusText.textContent = 'Live';
+            } else if (errorMsg) {
+                statusDot.className = 'status-dot status-error';
+                statusText.textContent = errorMsg;
+            } else {
+                statusDot.className = 'status-dot status-inactive';
+                statusText.textContent = 'Idle';
+            }
+        }
+        
+        function toggleButtons() {
+            document.getElementById('start-camera').style.display = streaming ? 'none' : 'flex';
+            document.getElementById('stop-camera').style.display = streaming ? 'flex' : 'none';
+        }
+    </script>
+</head>
+<body class="min-h-screen">
+    <div class="aurora-background"></div>
+    <div class="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 relative">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl sm:text-5xl font-light text-slate-100 tracking-tight">AI Hand Detection</h1>
+            <p class="text-slate-400 text-sm mt-2">Real-time gesture recognition through your webcam</p>
+        </header>
+
+        <main class="w-full max-w-3xl">
+            <section class="glass-card rounded-2xl p-4 sm:p-6 mb-8">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <button id="start-camera" class="elegant-button px-6 py-2.5 text-white rounded-lg text-sm font-medium flex items-center gap-2">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M17 10.5V7c0-1.66-1.34-3-3-3s-3 1.34-3 3v3.5c0 .83.67 1.5 1.5 1.5s1.5-.67 1.5-1.5V7H12v3.5a3.5 3.5 0 107 0V10.5h-2Z"></path><path d="M5 20a1 1 0 01-1-1v-6a1 1 0 012 0v6a1 1 0 01-1 1zm5 0a1 1 0 01-1-1v-6a1 1 0 112 0v6a1 1 0 01-1 1zm5 0a1 1 0 01-1-1v-6a1 1 0 112 0v6a1 1 0 01-1 1zm5 0a1 1 0 01-1-1v-6a1 1 0 112 0v6a1 1 0 01-1 1z"></path></svg>
+                            Start Live Feed
+                        </button>
+                        <button id="stop-camera" class="elegant-button stop-button px-6 py-2.5 text-white rounded-lg text-sm font-medium hidden items-center gap-2">
+                            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zM10 16.5v-9l6 4.5l-6 4.5z"></path><path d="M10 16.5v-9l6 4.5l-6 4.5z" opacity=".3"></path><path d="M12 20c4.41 0 8-3.59 8-8s-3.59-8-8-8s-8 3.59-8 8s3.59 8 8 8zm0-14c3.31 0 6 2.69 6 6s-2.69 6-6 6s-6-2.69-6-6s2.69-6 6-6zm-2 8.5v-5l4 2.5l-4 2.5z"></path></svg>
+                            Stop Live Feed
+                        </button>
+                    </div>
+                    
+                    <div class="status-pill">
+                        <div id="status-dot" class="status-dot status-inactive"></div>
+                        <span id="status-text" class="text-slate-300 text-sm font-medium">Idle</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="camera-card glass-card rounded-2xl overflow-hidden">
+                <div class="p-4 flex justify-center items-center">
+                    <div class="camera-container rounded-lg overflow-hidden">
+                        <img id="processed-feed" class="block bg-black" 
+                             width="640" height="480"
+                             style="width: 100%; height: auto; object-fit: cover; transform: scaleX(-1);"
+                             src="" 
+                             alt="Hand detection feed">
+                    </div>
+                </div>
+                <div class="info-panel flex">
+                    <div class="info-item">
+                        <h4 class="text-xs text-slate-400 mb-1 tracking-wider uppercase">Gesture</h4>
+                        <p id="gesture-output" class="text-lg font-semibold text-slate-100">-</p>
+                    </div>
+                    <div class="info-item">
+                        <h4 class="text-xs text-slate-400 mb-1 tracking-wider uppercase">Confidence</h4>
+                        <p id="confidence-output" class="text-lg font-semibold text-slate-100">-</p>
+                    </div>
+                    <div class="info-item">
+                        <h4 class="text-xs text-slate-400 mb-1 tracking-wider uppercase">Latency</h4>
+                        <p id="latency-output" class="text-lg font-semibold text-slate-100">-</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+        
+        <video id="camera-feed" class="hidden"></video>
+        <canvas id="canvas" class="hidden"></canvas>
+    </div>
+</body>
+</html>

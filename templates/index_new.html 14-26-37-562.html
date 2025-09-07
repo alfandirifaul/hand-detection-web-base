@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hand Detection - Server Camera</title>
+    <script src="https://cdn.socket.io/4.5.1/socket.io.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100;200;300;400;500;600;700;800;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: radial-gradient(ellipse at center, #0f0f23 0%, #050507 70%);
+            color: #ffffff;
+            overflow-x: hidden;
+            min-height: 100vh;
+            position: relative;
+        }
+
+        /* Animated Background with Particles */
+        .bg-particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3), transparent),
+                radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3), transparent),
+                radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2), transparent);
+            animation: bg-shift 15s ease-in-out infinite;
+        }
+
+        @keyframes bg-shift {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50% { transform: scale(1.1) rotate(180deg); }
+        }
+
+        /* Grid Overlay */
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background-image: 
+                linear-gradient(rgba(120, 119, 198, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(120, 119, 198, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: grid-move 20s linear infinite;
+        }
+
+        @keyframes grid-move {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        /* Glassmorphism Cards */
+        .neo-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            box-shadow: 
+                0 8px 32px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .neo-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+            transition: left 0.8s ease;
+        }
+
+        .neo-card:hover::before {
+            left: 100%;
+        }
+
+        .neo-card:hover {
+            transform: translateY(-8px);
+            border-color: rgba(120, 119, 198, 0.4);
+            box-shadow: 
+                0 20px 60px rgba(120, 119, 198, 0.2),
+                0 8px 32px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(255, 255, 255, 0.2);
+        }
+
+        /* Neon Buttons */
+        .neon-btn {
+            background: linear-gradient(45deg, #7877c6, #ff77c6, #77d9ff);
+            background-size: 300% 300%;
+            border: none;
+            border-radius: 15px;
+            padding: 16px 32px;
+            font-weight: 600;
+            color: white;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.4s ease;
+            animation: gradient-shift 3s ease infinite;
+        }
+
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        .neon-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+            transition: left 0.6s ease;
+        }
+
+        .neon-btn:hover::before {
+            left: 100%;
+        }
+
+        .neon-btn:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 
+                0 10px 30px rgba(120, 119, 198, 0.5),
+                0 0 50px rgba(120, 119, 198, 0.3);
+        }
+
+        .neon-btn:active {
+            transform: translateY(0) scale(1.02);
+        }
+
+        .stop-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ff8e8e, #ffa8a8);
+        }
+
+        .stop-btn:hover {
+            box-shadow: 
+                0 10px 30px rgba(255, 107, 107, 0.5),
+                0 0 50px rgba(255, 107, 107, 0.3);
+        }
+
+        /* Status Indicators */
+        .status-orb {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            position: relative;
+            margin-right: 12px;
+        }
+
+        .status-orb::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulse-ring 2s ease-out infinite;
+        }
+
+        .status-active {
+            background: #00ff88;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.8);
+        }
+
+        .status-active::before {
+            background: rgba(0, 255, 136, 0.4);
+        }
+
+        .status-inactive {
+            background: #666;
+            box-shadow: 0 0 10px rgba(102, 102, 102, 0.5);
+        }
+
+        .status-inactive::before {
+            background: rgba(102, 102, 102, 0.3);
+        }
+
+        .status-error {
+            background: #ff3366;
+            box-shadow: 0 0 20px rgba(255, 51, 102, 0.8);
+        }
+
+        .status-error::before {
+            background: rgba(255, 51, 102, 0.4);
+        }
+
+        @keyframes pulse-ring {
+            0% {
+                transform: translate(-50%, -50%) scale(0.8);
+                opacity: 1;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(2.5);
+                opacity: 0;
+            }
+        }
+
+        /* Metric Cards */
+        .metric-tile {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .metric-tile::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, #7877c6, #ff77c6, #77d9ff);
+            background-size: 200% 100%;
+            animation: border-flow 3s linear infinite;
+        }
+
+        @keyframes border-flow {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+
+        .metric-tile:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: rgba(120, 119, 198, 0.3);
+            transform: translateY(-4px);
+            box-shadow: 0 15px 40px rgba(120, 119, 198, 0.2);
+        }
+
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(45deg, #7877c6, #ff77c6, #77d9ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            line-height: 1;
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, 0.6);
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        /* Camera Feed */
+        .camera-container {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .camera-feed {
+            width: 100%;
+            height: auto;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent, rgba(120, 119, 198, 0.1), transparent);
+            pointer-events: none;
+        }
+
+        /* Header */
+        .header-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(45deg, #7877c6, #ff77c6);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            box-shadow: 
+                0 20px 40px rgba(120, 119, 198, 0.3),
+                0 0 80px rgba(120, 119, 198, 0.2);
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .main-title {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 900;
+            background: linear-gradient(45deg, #7877c6, #ff77c6, #77d9ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+            margin-bottom: 16px;
+            letter-spacing: -2px;
+        }
+
+        .subtitle {
+            text-align: center;
+            font-size: 1.125rem;
+            color: rgba(255, 255, 255, 0.7);
+            max-width: 600px;
+            margin: 0 auto 32px;
+            line-height: 1.6;
+        }
+
+        /* Button Indicators */
+        .btn-indicator {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .btn-indicator.active {
+            animation: indicator-glow 1.5s ease-in-out infinite;
+        }
+
+        .btn-indicator.active::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: inherit;
+            transform: translate(-50%, -50%);
+            animation: ripple 1.5s ease-out infinite;
+        }
+
+        @keyframes indicator-glow {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.2); opacity: 0.8; }
+        }
+
+        @keyframes ripple {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 0.8; }
+            100% { transform: translate(-50%, -50%) scale(3); opacity: 0; }
+        }
+
+        /* Loading States */
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top: 3px solid #7877c6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .main-title {
+                font-size: 2.5rem;
+            }
+            
+            .metric-value {
+                font-size: 2rem;
+            }
+            
+            .neo-card {
+                border-radius: 16px;
+            }
+        }
+
+        /* Enhanced Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #7877c6, #ff77c6);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #ff77c6, #77d9ff);
+        }
+
+        /* Section Headers */
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .section-icon {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(45deg, #7877c6, #ff77c6);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: white;
+        }
+
+        /* Connection Status */
+        .connection-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: rgba(0, 255, 136, 0.1);
+            border: 1px solid rgba(0, 255, 136, 0.3);
+            border-radius: 20px;
+            font-size: 0.875rem;
+            color: #00ff88;
+            margin-top: 16px;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <div class="aurora-background"></div>
+    <div class="min-h-screen flex flex-col items-center justify-center p-4 sm:p-8 relative">
+        <div class="w-full max-w-4xl">
+            <!-- Header with Enhanced Styling -->
+            <div class="text-center mb-8">
+                <div class="inline-block mb-4">
+                    <div class="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-2xl">
+                        <svg class="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1H5C3.89 1 3 1.89 3 3V21C3 22.11 3.89 23 5 23H11V21H5V3H13V9H21ZM14 19H16L18.5 21.5L19.92 20.08L18 18.16L19.92 16.24L18.5 14.82L16 17.32H14V19ZM22 15.5C22 17.38 20.37 19 18.5 19C16.63 19 15 17.38 15 15.5C15 13.62 16.63 12 18.5 12C20.37 12 22 13.62 22 15.5Z"/>
+                        </svg>
+                    </div>
+                </div>
+                <h1 class="text-4xl md:text-5xl font-bold mb-3 tracking-tight">Hand Detection</h1>
+                <p class="text-gray-400 text-base md:text-lg max-w-2xl mx-auto leading-relaxed">
+                    Advanced AI-powered gesture recognition system with real-time computer vision
+                </p>
+                <div class="mt-4 flex items-center justify-center gap-2 text-sm text-gray-500">
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span>Server Camera Ready</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col lg:flex-row gap-8">
+                <!-- Left Column - Info Panel with Enhanced Design -->
+                <div class="w-full lg:w-72 flex flex-col gap-6">
+                    <!-- Status Card with Enhanced Styling -->
+                    <div class="glass-card rounded-2xl p-6 float-animation">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-semibold text-white">System Status</h3>
+                        </div>
+                        <div class="status-pill">
+                            <div id="dot" class="w-3 h-3 rounded-full status-inactive status-dot"></div>
+                            <span id="status" class="text-gray-300 font-medium">Ready</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Metrics Card with Enhanced Layout -->
+                    <div class="glass-card rounded-2xl p-6 flex-grow float-animation">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M2 10a8 8 0 018-8v8h8a8 8 0 11-16 0z"></path>
+                                    <path d="M12 2.252A8.014 8.014 0 0117.748 8H12V2.252z"></path>
+                                </svg>
+                            </div>
+                            <h3 class="text-lg font-semibold text-white">Live Metrics</h3>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <!-- Hands Detected -->
+                            <div class="metric-card p-4 col-span-2">
+                                <div class="flex items-center justify-between mb-2">
+                                    <p class="text-xs font-medium text-gray-400 uppercase tracking-wider">Hands Detected</p>
+                                    <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                                </div>
+                                <p class="text-2xl metric-value" id="num-hands">0</p>
+                            </div>
+
+                            <!-- Fingers Detected -->
+                            <div class="metric-card p-4">
+                                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Fingers</p>
+                                <p class="text-xl metric-value" id="fingers-count">0</p>
+                            </div>
+                            
+                            <!-- FPS -->
+                            <div class="metric-card p-4">
+                                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">FPS</p>
+                                <p class="text-xl metric-value" id="fps-value">0</p>
+                            </div>
+                            
+                            <!-- Session Time -->
+                            <div class="metric-card p-4 col-span-2">
+                                <p class="text-xs font-medium text-gray-400 uppercase tracking-wider mb-2">Session Time</p>
+                                <p class="text-xl metric-value font-mono" id="session-time">00:00</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Center Column - Camera Feed -->
+                <div class="flex-grow">
+                    <!-- Camera Card -->
+                    <div class="glass-card rounded-3xl overflow-hidden">
+                        <div class="flex items-center justify-between px-4 py-2">
+                            <h2 class="text-sm font-medium text-gray-300">Server Camera Feed</h2>
+                            <span id="camera-status" class="text-xs text-gray-400">Server Camera Ready</span>
+                        </div>
+                        <div class="camera-card">
+                            <img id="processed-feed" 
+                                width="640" height="480"
+                                style="width: 100%; height: auto; max-width: 640px; display: block; margin: 0 auto;"
+                                src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQwIiBoZWlnaHQ9IjQ4MCIgdmlld0JveD0iMCAwIDY0MCA0ODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjY0MCIgaGVpZ2h0PSI0ODAiIGZpbGw9IiMwYzBjMGMiLz4KICA8cGF0aCBkPSJNMzIwIDIwMEM0MTcuMyAyMDAgNDk2IDIyNi45IDQ5NiAyNjBDNDk2IDI5My4xIDQxNy4zIDMyMCAzMjAgMzIwQzIyMi43IDMyMCAxNDQgMjkzLjEgMTQ0IDI2MEMxNDQgMjI2LjkgMjIyLjcgMjAwIDMyMCAyMDAiIHN0cm9rZT0iIzMzMzMzMyIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CiAgPHBhdGggZD0iTTMyMCAxNjBDMzY0LjIgMTYwIDQwMCAxOTUuOCA0MDAgMjQwQzQwMCAyODQuMiAzNjQuMiAzMjAgMzIwIDMyMEMyNzUuOCAzMjAgMjQwIDI4NC4yIDI0MCAyNDBDMjQwIDE5NS44IDI3NS44IDE2MCAzMjAgMTYwIiBzdHJva2U9IiM0NDQ0NDQiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgogIDxjaXJjbGUgY3g9IjMyMCIgY3k9IjI0MCIgcj0iNDAiIHN0cm9rZT0iIzU1NTU1NSIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CiAgPGNpcmNsZSBjeD0iMzIwIiBjeT0iMjQwIiByPSI4IiBmaWxsPSIjNjY2NjY2Ii8+CiAgPHRleHQgeD0iMzIwIiB5PSIzMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNhYWFhYWEiIGZvbnQtZmFtaWx5PSJJbnRlciIgZm9udC1zaXplPSIxNCI+Q2FtZXJhIHJlYWR5PC90ZXh0PgogIDx0ZXh0IHg9IjMyMCIgeT0iMzI1IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2NjY2IiBmb250LWZhbWlseT0iSW50ZXIiIGZvbnQtc2l6ZT0iMTIiPkNsaWNrIFN0YXJ0IHRvIGJlZ2luIGhhbmQgZGV0ZWN0aW9uPC90ZXh0PgogIDxwYXRoIGQ9Ik0yNjAgMjQwSDM4MCIgc3Ryb2tlPSIjMzMzMzMzIiBzdHJva2Utd2lkdGg9IjEiLz4KICA8cGF0aCBkPSJNMzIwIDE4MEwzMjAgMzAwIiBzdHJva2U9IiMzMzMzMzMiIHN0cm9rZS13aWR0aD0iMSIvPgo8L3N2Zz4K" 
+                                alt="Hand detection">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Right Column - Button Status -->
+                <div class="w-full lg:w-64 flex flex-col gap-4">
+                    <!-- Button Status Card -->
+                    <div class="glass-card rounded-2xl p-4">
+                        <h3 class="text-sm font-medium text-gray-300 mb-3">Button Status</h3>
+                        <div class="space-y-4">
+                            <!-- Green Button -->
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-400">Green Button</span>
+                                <div class="w-3 h-3 rounded-full bg-green-500 opacity-30 button-indicator" id="green-indicator"></div>
+                            </div>
+                            
+                            <!-- Red Button -->
+                            <div class="flex items-center justify-between">
+                                <span class="text-sm text-gray-400">Red Button</span>
+                                <div class="w-3 h-3 rounded-full bg-red-500 opacity-30 button-indicator" id="red-indicator"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Controls Card -->
+                    <div class="glass-card rounded-2xl p-4 flex-grow">
+                        <h3 class="text-sm font-medium text-gray-300 mb-3">Controls</h3>
+                        
+                        <div class="space-y-3">
+                            <button id="start-btn" class="elegant-button w-full px-4 py-3 text-white text-sm rounded-xl flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clip-rule="evenodd"></path>
+                                </svg>
+                                Start Camera
+                            </button>
+                            
+                            <button id="stop-btn" class="elegant-button stop-button w-full px-4 py-3 text-white text-sm rounded-xl hidden items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8 7a1 1 0 00-1 1v4a1 1 0 001 1h4a1 1 0 001-1V8a1 1 0 00-1-1H8z" clip-rule="evenodd"></path>
+                                </svg>
+                                Stop Camera
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Constants
+        const PLACEHOLDER_SVG = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQwIiBoZWlnaHQ9IjQ4MCIgdmlld0JveD0iMCAwIDY0MCA0ODAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CiAgPHJlY3Qgd2lkdGg9IjY0MCIgaGVpZ2h0PSI0ODAiIGZpbGw9IiMwYzBjMGMiLz4KICA8cGF0aCBkPSJNMzIwIDIwMEM0MTcuMyAyMDAgNDk2IDIyNi45IDQ5NiAyNjBDNDk2IDI5My4xIDQxNy4zIDMyMCAzMjAgMzIwQzIyMi43IDMyMCAxNDQgMjkzLjEgMTQ0IDI2MEMxNDQgMjI2LjkgMjIyLjcgMjAwIDMyMCAyMDAiIHN0cm9rZT0iIzMzMzMzMyIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CiAgPHBhdGggZD0iTTMyMCAxNjBDMzY0LjIgMTYwIDQwMCAxOTUuOCA0MDAgMjQwQzQwMCAyODQuMiAzNjQuMiAzMjAgMzIwIDMyMEMyNzUuOCAzMjAgMjQwIDI4NC4yIDI0MCAyNDBDMjQwIDE5NS44IDI3NS44IDE2MCAzMjAgMTYwIiBzdHJva2U9IiM0NDQ0NDQiIHN0cm9rZS13aWR0aD0iMiIgZmlsbD0ibm9uZSIvPgogIDxjaXJjbGUgY3g9IjMyMCIgY3k9IjI0MCIgcj0iNDAiIHN0cm9rZT0iIzU1NTU1NSIgc3Ryb2tlLXdpZHRoPSIyIiBmaWxsPSJub25lIi8+CiAgPGNpcmNsZSBjeD0iMzIwIiBjeT0iMjQwIiByPSI4IiBmaWxsPSIjNjY2NjY2Ii8+CiAgPHRleHQgeD0iMzIwIiB5PSIzMDAiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiNhYWFhYWEiIGZvbnQtZmFtaWx5PSJJbnRlciIgZm9udC1zaXplPSIxNCI+Q2FtZXJhIHJlYWR5PC90ZXh0PgogIDx0ZXh0IHg9IjMyMCIgeT0iMzI1IiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmaWxsPSIjNjY2NjY2IiBmb250LWZhbWlseT0iSW50ZXIiIGZvbnQtc2l6ZT0iMTIiPkNsaWNrIFN0YXJ0IHRvIGJlZ2luIGhhbmQgZGV0ZWN0aW9uPC90ZXh0PgogIDxwYXRoIGQ9Ik0yNjAgMjQwSDM4MCIgc3Ryb2tlPSIjMzMzMzMzIiBzdHJva2Utd2lkdGg9IjEiLz4KICA8cGF0aCBkPSJNMzIwIDE4MEwzMjAgMzAwIiBzdHJva2U9IiMzMzMzMzMiIHN0cm9rZS13aWR0aD0iMSIvPgo8L3N2Zz4K';
+        
+        // Global variables
+        let socket;
+        let streaming = false;
+        let processedFeed;
+        let greenIndicator;
+        let redIndicator;
+        let lastFrameTime = null;
+        let currentFps = 0;
+        let sessionStartTime = null;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Socket.IO
+            socket = io();
+            
+            // Initialize elements
+            processedFeed = document.getElementById('processed-feed');
+            greenIndicator = document.getElementById('green-indicator');
+            redIndicator = document.getElementById('red-indicator');
+            
+            // Button event listeners
+            document.getElementById('start-btn').addEventListener('click', startStream);
+            document.getElementById('stop-btn').addEventListener('click', stopStream);
+            
+            // Socket connection handlers
+            socket.on('connect', function() {
+                console.log('Connected to server');
+                updateStatus('ready');
+            });
+            
+            socket.on('disconnect', function() {
+                console.log('Disconnected from server');
+                updateStatus('error');
+                streaming = false;
+                updateUI();
+            });
+            
+            // Socket event handlers for frames - unified handler for all frame types
+            socket.on('processed_frame', handleFrame);
+            socket.on('server_frame', handleFrame);
+            
+            // Start session time counter
+            setInterval(updateSessionTime, 1000);
+        });
+        
+        function handleFrame(data) {
+            if (data && data.image) {
+                processedFeed.src = data.image;
+                
+                // Update detection data if available
+                if (data.detection_data) {
+                    updateDetectionData(data.detection_data);
+                }
+                
+                // Calculate FPS
+                const now = performance.now();
+                if (lastFrameTime) {
+                    const deltaTime = now - lastFrameTime;
+                    currentFps = Math.round(1000 / deltaTime);
+                    document.getElementById('fps-value').textContent = currentFps;
+                }
+                lastFrameTime = now;
+            } else if (typeof data === 'string') {
+                // Handle base64 image data directly
+                processedFeed.src = data;
+            }
+        }
+        
+        function startStream() {
+            if (streaming) return;
+            
+            console.log('Starting server camera stream...');
+            updateStatus('starting');
+            
+            streaming = true;
+            sessionStartTime = Date.now();
+            
+            // Request server to start camera streaming
+            socket.emit('start_stream');
+            
+            // Update UI
+            updateUI();
+        }
+        
+        function stopStream() {
+            if (!streaming) return;
+            
+            console.log('Stopping server camera stream...');
+            streaming = false;
+            
+            // Tell server to stop streaming
+            socket.emit('stop_stream');
+            
+            processedFeed.src = PLACEHOLDER_SVG;
+            updateStatus('ready');
+            
+            // Reset metrics
+            document.getElementById('num-hands').textContent = '0';
+            document.getElementById('fingers-count').textContent = '0';
+            document.getElementById('fps-value').textContent = '0';
+            
+            // Reset button indicators
+            updateButtonIndicators(null);
+            
+            // Update UI
+            updateUI();
+        }
+        
+        function updateStatus(status) {
+            const statusElement = document.getElementById('status');
+            const dotElement = document.getElementById('dot');
+            const cameraStatusElement = document.getElementById('camera-status');
+            
+            switch(status) {
+                case 'ready':
+                    statusElement.textContent = 'Ready';
+                    statusElement.className = 'text-gray-400 text-sm';
+                    dotElement.className = 'w-2 h-2 rounded-full status-inactive status-dot';
+                    cameraStatusElement.textContent = 'Server Camera Ready';
+                    cameraStatusElement.className = 'text-xs text-gray-400';
+                    break;
+                    
+                case 'active':
+                    statusElement.textContent = 'Active';
+                    statusElement.className = 'text-emerald-400 text-sm';
+                    dotElement.className = 'w-2 h-2 rounded-full status-active status-dot';
+                    cameraStatusElement.textContent = 'Streaming Active';
+                    cameraStatusElement.className = 'text-xs text-emerald-400';
+                    break;
+                    
+                case 'starting':
+                    statusElement.textContent = 'Starting...';
+                    statusElement.className = 'text-yellow-400 text-sm';
+                    dotElement.className = 'w-2 h-2 rounded-full status-inactive status-dot';
+                    cameraStatusElement.textContent = 'Starting Stream...';
+                    cameraStatusElement.className = 'text-xs text-yellow-400';
+                    break;
+                    
+                case 'error':
+                    statusElement.textContent = 'Error';
+                    statusElement.className = 'text-red-400 text-sm';
+                    dotElement.className = 'w-2 h-2 rounded-full status-error status-dot';
+                    cameraStatusElement.textContent = 'Camera Error';
+                    cameraStatusElement.className = 'text-xs text-red-400';
+                    break;
+            }
+        }
+        
+        function updateUI() {
+            const startBtn = document.getElementById('start-btn');
+            const stopBtn = document.getElementById('stop-btn');
+            
+            if (streaming) {
+                startBtn.style.display = 'none';
+                stopBtn.style.display = 'flex';
+                updateStatus('active');
+            } else {
+                startBtn.style.display = 'flex';
+                stopBtn.style.display = 'none';
+            }
+        }
+        
+        function updateSessionTime() {
+            if (!streaming || !sessionStartTime) {
+                document.getElementById('session-time').textContent = '00:00';
+                return;
+            }
+            
+            const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60).toString().padStart(2, '0');
+            const seconds = (elapsed % 60).toString().padStart(2, '0');
+            
+            document.getElementById('session-time').textContent = `${minutes}:${seconds}`;
+        }
+        
+        function updateDetectionData(data) {
+            // Update number of hands detected
+            document.getElementById('num-hands').textContent = data.num_hands || 0;
+            
+            // Update finger count
+            document.getElementById('fingers-count').textContent = data.fingers_count || 0;
+            
+            // Update button indicators
+            updateButtonIndicators(data.touched_button);
+        }
+        
+        function updateButtonIndicators(touchedButton) {
+            // Reset both indicators
+            greenIndicator.classList.remove('active');
+            redIndicator.classList.remove('active');
+            
+            // Activate the touched one
+            if (touchedButton === 'green') {
+                greenIndicator.classList.add('active');
+            } else if (touchedButton === 'red') {
+                redIndicator.classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>
